@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cobbleverse Raid Counter Analyzer</title>
+  <meta name="description" content="Find the best Pokémon counters for Cobbleverse raid dens with optimized movesets, ability scoring, and Tera type support.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔</text></svg>">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #12100e; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #1a1816; }
+    ::-webkit-scrollbar-thumb { background: #3a3530; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #56ab2f; }
+    input::placeholder { color: #5a5550; }
+    select option { background: #1e1c18; color: #e0dcd6; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+
+
+const TYPES = ["Normal","Fire","Water","Electric","Grass","Ice","Fighting","Poison","Ground","Flying","Psychic","Bug","Rock","Ghost","Dragon","Dark","Steel","Fairy"];
+const _tc={Normal:{Rock:.5,Ghost:0,Steel:.5},Fire:{Fire:.5,Water:.5,Grass:2,Ice:2,Bug:2,Rock:.5,Dragon:.5,Steel:2},Water:{Fire:2,Water:.5,Grass:.5,Ground:2,Rock:2,Dragon:.5},Electric:{Water:2,Electric:.5,Grass:.5,Ground:0,Flying:2,Dragon:.5},Grass:{Fire:.5,Water:2,Grass:.5,Poison:.5,Ground:2,Flying:.5,Bug:.5,Rock:2,Dragon:.5,Steel:.5},Ice:{Fire:.5,Water:.5,Grass:2,Ice:.5,Ground:2,Flying:2,Dragon:2,Steel:.5},Fighting:{Normal:2,Ice:2,Poison:.5,Flying:.5,Psychic:.5,Bug:.5,Rock:2,Ghost:0,Dark:2,Steel:2,Fairy:.5},Poison:{Grass:2,Poison:.5,Ground:.5,Rock:.5,Ghost:.5,Steel:0,Fairy:2},Ground:{Fire:2,Electric:2,Grass:.5,Poison:2,Flying:0,Bug:.5,Rock:2,Steel:2},Flying:{Electric:.5,Grass:2,Fighting:2,Bug:2,Rock:.5,Steel:.5},Psychic:{Fighting:2,Poison:2,Psychic:.5,Dark:0,Steel:.5},Bug:{Fire:.5,Grass:2,Fighting:.5,Poison:.5,Flying:.5,Psychic:2,Ghost:.5,Dark:2,Steel:.5,Fairy:.5},Rock:{Fire:2,Ice:2,Fighting:.5,Ground:.5,Flying:2,Bug:2,Steel:.5},Ghost:{Normal:0,Psychic:2,Ghost:2,Dark:.5},Dragon:{Dragon:2,Steel:.5,Fairy:0},Dark:{Fighting:.5,Psychic:2,Ghost:2,Dark:.5,Fairy:.5},Steel:{Fire:.5,Water:.5,Electric:.5,Ice:2,Rock:2,Steel:.5,Fairy:2},Fairy:{Fire:.5,Poison:.5,Fighting:2,Dragon:2,Dark:2,Steel:.5}};
+function getEff(a,dts){let m=1;for(const d of dts)m*=(_tc[a]?.[d]??1);return m;}
+function getDefMult(ats,dts){let w=0;for(const a of ats){const m=getEff(a,dts);if(m>w)w=m;}return w;}
+const TC={Normal:"#A8A77A",Fire:"#EE8130",Water:"#6390F0",Electric:"#F7D02C",Grass:"#7AC74C",Ice:"#96D9D6",Fighting:"#C22E28",Poison:"#A33EA1",Ground:"#E2BF65",Flying:"#A98FF3",Psychic:"#F95587",Bug:"#A6B91A",Rock:"#B6A136",Ghost:"#735797",Dragon:"#6F35FC",Dark:"#705746",Steel:"#B7B7CE",Fairy:"#D685AD"};
+
+// ─── POKEMON DB ───
+const pokemonDB = {"Abomasnow":["Grass","Ice"],"Abra":["Psychic"],"Absol":["Dark"],"Accelgor":["Bug"],"Aegislash":["Steel","Ghost"],"Aerodactyl":["Rock","Flying"],"Aggron":["Steel","Rock"],"Aipom":["Normal"],"Alakazam":["Psychic"],"Alcremie":["Fairy"],"Alolan Diglett":["Ground","Steel"],"Alolan Dugtrio":["Ground","Steel"],"Alolan Exeggutor":["Grass","Dragon"],"Alolan Geodude":["Rock","Electric"],"Alolan Golem":["Rock","Electric"],"Alolan Graveler":["Rock","Electric"],"Alolan Grimer":["Poison","Dark"],"Alolan Marowak":["Fire","Ghost"],"Alolan Meowth":["Dark"],"Alolan Muk":["Poison","Dark"],"Alolan Ninetales":["Ice","Fairy"],"Alolan Persian":["Dark"],"Alolan Raichu":["Electric","Psychic"],"Alolan Raticate":["Dark","Normal"],"Alolan Rattata":["Dark","Normal"],"Alolan Sandshrew":["Ice","Steel"],"Alolan Sandslash":["Ice","Steel"],"Alolan Vulpix":["Ice"],"Alomomola":["Water"],"Altaria":["Dragon","Flying"],"Amaura":["Rock","Ice"],"Ambipom":["Normal"],"Amoonguss":["Grass","Poison"],"Ampharos":["Electric"],"Annihilape":["Fighting","Ghost"],"Anorith":["Rock","Bug"],"Appletun":["Grass","Dragon"],"Applin":["Grass","Dragon"],"Araquanid":["Water","Bug"],"Arbok":["Poison"],"Arboliva":["Grass","Normal"],"Arcanine":["Fire"],"Arceus":["Normal"],"Archaludon":["Steel","Dragon"],"Archen":["Rock","Flying"],"Archeops":["Rock","Flying"],"Arctibax":["Dragon","Ice"],"Arctovish":["Water","Ice"],"Arctozolt":["Electric","Ice"],"Ariados":["Bug","Poison"],"Armaldo":["Rock","Bug"],"Armarouge":["Fire","Psychic"],"Aromatisse":["Fairy"],"Aron":["Steel","Rock"],"Arrokuda":["Water"],"Articuno":["Ice","Flying"],"Audino":["Normal"],"Aurorus":["Rock","Ice"],"Avalugg":["Ice"],"Axew":["Dragon"],"Azelf":["Psychic"],"Azumarill":["Water","Fairy"],"Azurill":["Normal","Fairy"],"Bagon":["Dragon"],"Baltoy":["Ground","Psychic"],"Banette":["Ghost"],"Barbaracle":["Rock","Water"],"Barboach":["Water","Ground"],"Barraskewda":["Water"],"Basculegion":["Water","Ghost"],"Basculin":["Water"],"Bastiodon":["Rock","Steel"],"Baxcalibur":["Dragon","Ice"],"Bayleef":["Grass"],"Beartic":["Ice"],"Beautifly":["Bug","Flying"],"Beedrill":["Bug","Poison"],"Beheeyem":["Psychic"],"Beldum":["Steel","Psychic"],"Bellibolt":["Electric"],"Bellossom":["Grass"],"Bellsprout":["Grass","Poison"],"Bergmite":["Ice"],"Bewear":["Normal","Fighting"],"Bibarel":["Normal","Water"],"Bidoof":["Normal"],"Binacle":["Rock","Water"],"Bisharp":["Dark","Steel"],"Blacephalon":["Fire","Ghost"],"Blastoise":["Water"],"Blaziken":["Fire","Fighting"],"Blipbug":["Bug"],"Blissey":["Normal"],"Blitzle":["Electric"],"Bloodmoon Ursaluna":["Ground","Normal"],"Boldore":["Rock"],"Boltund":["Electric"],"Bombirdier":["Flying","Dark"],"Bonsly":["Rock"],"Bouffalant":["Normal"],"Bounsweet":["Grass"],"Braixen":["Fire"],"Brambleghast":["Grass","Ghost"],"Bramblin":["Grass","Ghost"],"Braviary":["Normal","Flying"],"Breloom":["Grass","Fighting"],"Brionne":["Water"],"Bronzong":["Steel","Psychic"],"Bronzor":["Steel","Psychic"],"Brute Bonnet":["Grass","Dark"],"Bruxish":["Water","Psychic"],"Budew":["Grass","Poison"],"Bug":["Bug"],"Buizel":["Water"],"Bulbasaur":["Grass","Poison"],"Buneary":["Normal"],"Bunnelby":["Normal"],"Burmy":["Bug"],"Butterfree":["Bug","Flying"],"Buzzwole":["Bug","Fighting"],"Cacnea":["Grass"],"Cacturne":["Grass","Dark"],"Calyrex":["Psychic","Grass"],"Calyrex-Ice":["Psychic","Ice"],"Calyrex-Shadow":["Psychic","Ghost"],"Camerupt":["Fire","Ground"],"Capsakid":["Grass"],"Carbink":["Rock","Fairy"],"Carkol":["Rock","Fire"],"Carnivine":["Grass"],"Carracosta":["Water","Rock"],"Carvanha":["Water","Dark"],"Cascoon":["Bug"],"Castform":["Normal"],"Caterpie":["Bug"],"Celebi":["Psychic","Grass"],"Celesteela":["Steel","Flying"],"Centiskorch":["Fire","Bug"],"Ceruledge":["Fire","Ghost"],"Cetitan":["Ice"],"Cetoddle":["Ice"],"Chandelure":["Ghost","Fire"],"Chansey":["Normal"],"Charcadet":["Fire"],"Charizard":["Fire","Flying"],"Charjabug":["Bug","Electric"],"Charmander":["Fire"],"Charmeleon":["Fire"],"Chatot":["Normal","Flying"],"Cherrim":["Grass"],"Cherubi":["Grass"],"Chesnaught":["Grass","Fighting"],"Chespin":["Grass"],"Chewtle":["Water"],"Chi-Yu":["Dark","Fire"],"Chien-Pao":["Dark","Ice"],"Chikorita":["Grass"],"Chimchar":["Fire"],"Chimecho":["Psychic"],"Chinchou":["Water","Electric"],"Chingling":["Psychic"],"Cinccino":["Normal"],"Cinderace":["Fire"],"Clamperl":["Water"],"Clauncher":["Water"],"Clawitzer":["Water"],"Claydol":["Ground","Psychic"],"Clefable":["Fairy"],"Clefairy":["Fairy"],"Cleffa":["Fairy"],"Clobbopus":["Fighting"],"Clodsire":["Poison","Ground"],"Cloyster":["Water","Ice"],"Coalossal":["Rock","Fire"],"Cobalion":["Steel","Fighting"],"Cofagrigus":["Ghost"],"Combee":["Bug","Flying"],"Combusken":["Fire","Fighting"],"Comfey":["Fairy"],"Conkeldurr":["Fighting"],"Copperajah":["Steel"],"Corphish":["Water"],"Corsola":["Water","Rock"],"Corviknight":["Flying","Steel"],"Corvisquire":["Flying"],"Cosmoem":["Psychic"],"Cosmog":["Psychic"],"Cottonee":["Grass","Fairy"],"Crabominable":["Fighting","Ice"],"Crabrawler":["Fighting"],"Cradily":["Rock","Grass"],"Cramorant":["Flying","Water"],"Cranidos":["Rock"],"Crawdaunt":["Water","Dark"],"Cresselia":["Psychic"],"Croagunk":["Poison","Fighting"],"Crobat":["Poison","Flying"],"Crocalor":["Fire"],"Croconaw":["Water"],"Crustle":["Bug","Rock"],"Cryogonal":["Ice"],"Cubchoo":["Ice"],"Cubone":["Ground"],"Cufant":["Steel"],"Cursola":["Ghost"],"Cutiefly":["Bug","Fairy"],"Cyclizar":["Dragon","Normal"],"Cyndaquil":["Fire"],"Dachsbun":["Fairy"],"Dark":["Dark"],"Darkrai":["Dark"],"Darmanitan":["Fire"],"Dartrix":["Grass","Flying"],"Darumaka":["Fire"],"Decidueye":["Grass","Ghost"],"Dedenne":["Electric","Fairy"],"Deerling":["Normal","Grass"],"Deino":["Dark","Dragon"],"Delcatty":["Normal"],"Delibird":["Ice","Flying"],"Delphox":["Fire","Psychic"],"Deoxys":["Psychic"],"Deoxys-Attack":["Psychic"],"Deoxys-Defense":["Psychic"],"Deoxys-Speed":["Psychic"],"Dewgong":["Water","Ice"],"Dewott":["Water"],"Dewpider":["Water","Bug"],"Dhelmise":["Ghost","Grass"],"Dialga":["Steel","Dragon"],"Diancie":["Rock","Fairy"],"Diggersby":["Normal","Ground"],"Diglett":["Ground"],"Dipplin":["Grass","Dragon"],"Ditto":["Normal"],"Dodrio":["Normal","Flying"],"Doduo":["Normal","Flying"],"Dolliv":["Grass","Normal"],"Dondozo":["Water"],"Donphan":["Ground"],"Dottler":["Bug","Psychic"],"Doublade":["Steel","Ghost"],"Dracovish":["Water","Dragon"],"Dracozolt":["Electric","Dragon"],"Dragalge":["Poison","Dragon"],"Dragapult":["Dragon","Ghost"],"Dragon":["Dragon"],"Dragonair":["Dragon"],"Dragonite":["Dragon","Flying"],"Drakloak":["Dragon","Ghost"],"Drampa":["Normal","Dragon"],"Drapion":["Poison","Dark"],"Dratini":["Dragon"],"Drednaw":["Water","Rock"],"Dreepy":["Dragon","Ghost"],"Drifblim":["Ghost","Flying"],"Drifloon":["Ghost","Flying"],"Drilbur":["Ground"],"Drizzile":["Water"],"Drowzee":["Psychic"],"Druddigon":["Dragon"],"Dubwool":["Normal"],"Ducklett":["Water","Flying"],"Dudunsparce":["Normal"],"Dugtrio":["Ground"],"Dunsparce":["Normal"],"Duosion":["Psychic"],"Duraludon":["Steel","Dragon"],"Durant":["Bug","Steel"],"Dusclops":["Ghost"],"Dusknoir":["Ghost"],"Duskull":["Ghost"],"Dustox":["Bug","Poison"],"Dwebble":["Bug","Rock"],"East Sea":["Water"],"Eelektrik":["Electric"],"Eelektross":["Electric"],"Eevee":["Normal"],"Eiscue":["Ice"],"Ekans":["Poison"],"Eldegoss":["Grass"],"Electabuzz":["Electric"],"Electivire":["Electric"],"Electric":["Electric"],"Electrike":["Electric"],"Electrode":["Electric"],"Elekid":["Electric"],"Elgyem":["Psychic"],"Emboar":["Fire","Fighting"],"Emolga":["Electric","Flying"],"Empoleon":["Water","Steel"],"Enamorus":["Fairy","Flying"],"Entei":["Fire"],"Escavalier":["Bug","Steel"],"Espathra":["Psychic"],"Espeon":["Psychic"],"Espurr":["Psychic"],"Eternatus":["Poison","Dragon"],"Excadrill":["Ground","Steel"],"Exeggcute":["Grass","Psychic"],"Exeggutor":["Grass","Psychic"],"Exploud":["Normal"],"Fairy":["Fairy"],"Falinks":["Fighting"],"Fan Rotom":["Electric","Flying"],"Farfetch\'d":["Normal","Flying"],"Farigiraf":["Normal","Psychic"],"Fearow":["Normal","Flying"],"Feebas":["Water"],"Fennekin":["Fire"],"Feraligatr":["Water"],"Ferroseed":["Grass","Steel"],"Ferrothorn":["Grass","Steel"],"Fezandipiti":["Poison","Fairy"],"Fidough":["Fairy"],"Fighting":["Fighting"],"Finizen":["Water"],"Finneon":["Water"],"Fire":["Fire"],"Flaaffy":["Electric"],"Flabébé":["Fairy"],"Flamigo":["Flying","Fighting"],"Flapple":["Grass","Dragon"],"Flareon":["Fire"],"Fletchinder":["Fire","Flying"],"Fletchling":["Normal","Flying"],"Flittle":["Psychic"],"Floatzel":["Water"],"Floette":["Fairy"],"Floragato":["Grass"],"Florges":["Fairy"],"Flutter Mane":["Ghost","Fairy"],"Flygon":["Ground","Dragon"],"Flying":["Flying"],"Fomantis":["Grass"],"Foongus":["Grass","Poison"],"Forretress":["Bug","Steel"],"Fraxure":["Dragon"],"Frigibax":["Dragon","Ice"],"Frillish":["Water","Ghost"],"Froakie":["Water"],"Frogadier":["Water"],"Froslass":["Ice","Ghost"],"Frosmoth":["Ice","Bug"],"Frost Rotom":["Electric","Ice"],"Fuecoco":["Fire"],"Furfrou":["Normal"],"Furret":["Normal"],"Gabite":["Dragon","Ground"],"Galarian Articuno":["Psychic","Flying"],"Galarian Corsola":["Ghost"],"Galarian Darmanitan":["Ice"],"Galarian Darmanitan Zen":["Ice","Fire"],"Galarian Darumaka":["Ice"],"Galarian Farfetch\'d":["Fighting"],"Galarian Linoone":["Dark","Normal"],"Galarian Meowth":["Steel"],"Galarian Moltres":["Dark","Flying"],"Galarian Mr. Mime":["Ice","Psychic"],"Galarian Ponyta":["Psychic"],"Galarian Rapidash":["Psychic","Fairy"],"Galarian Slowbro":["Poison","Psychic"],"Galarian Slowking":["Poison","Psychic"],"Galarian Slowpoke":["Psychic"],"Galarian Stunfisk":["Ground","Steel"],"Galarian Weezing":["Poison","Fairy"],"Galarian Yamask":["Ground","Ghost"],"Galarian Zapdos":["Fighting","Flying"],"Galarian Zigzagoon":["Dark","Normal"],"Gallade":["Psychic","Fighting"],"Galvantula":["Bug","Electric"],"Garbodor":["Poison"],"Garchomp":["Dragon","Ground"],"Gardevoir":["Psychic","Fairy"],"Garganacl":["Rock"],"Gastly":["Ghost","Poison"],"Gastrodon":["Water","Ground"],"Genesect":["Bug","Steel"],"Gengar":["Ghost","Poison"],"Geodude":["Rock","Ground"],"Gholdengo":["Steel","Ghost"],"Ghost":["Ghost"],"Gible":["Dragon","Ground"],"Gigalith":["Rock"],"Gimmighoul":["Ghost"],"Girafarig":["Normal","Psychic"],"Giratina":["Ghost","Dragon"],"Giratina-Origin":["Ghost","Dragon"],"Glaceon":["Ice"],"Glalie":["Ice"],"Glameow":["Normal"],"Glastrier":["Ice"],"Gligar":["Ground","Flying"],"Glimmet":["Rock","Poison"],"Glimmora":["Rock","Poison"],"Gliscor":["Ground","Flying"],"Gloom":["Grass","Poison"],"Gogoat":["Grass"],"Golbat":["Poison","Flying"],"Goldeen":["Water"],"Golduck":["Water"],"Golem":["Rock","Ground"],"Golett":["Ground","Ghost"],"Golisopod":["Bug","Water"],"Golurk":["Ground","Ghost"],"Goodra":["Dragon"],"Goomy":["Dragon"],"Gorebyss":["Water"],"Gossifleur":["Grass"],"Gothita":["Psychic"],"Gothitelle":["Psychic"],"Gothorita":["Psychic"],"Gouging Fire":["Fire","Dragon"],"Gourgeist":["Ghost","Grass"],"Grafaiai":["Poison","Normal"],"Granbull":["Fairy"],"Grapploct":["Fighting"],"Grass":["Grass"],"Graveler":["Rock","Ground"],"Great Tusk":["Ground","Fighting"],"Greavard":["Ghost"],"Greedent":["Normal"],"Greninja":["Water","Dark"],"Grimer":["Poison"],"Grimmsnarl":["Dark","Fairy"],"Grookey":["Grass"],"Grotle":["Grass"],"Groudon":["Ground"],"Ground":["Ground"],"Grovyle":["Grass"],"Growlithe":["Fire"],"Grubbin":["Bug"],"Grumpig":["Psychic"],"Gulpin":["Poison"],"Gumshoos":["Normal"],"Gurdurr":["Fighting"],"Guzzlord":["Dark","Dragon"],"Gyarados":["Water","Flying"],"Hakamo-o":["Dragon","Fighting"],"Happiny":["Normal"],"Hariyama":["Fighting"],"Hatenna":["Psychic"],"Hatterene":["Psychic","Fairy"],"Hattrem":["Psychic"],"Haunter":["Ghost","Poison"],"Hawlucha":["Fighting","Flying"],"Haxorus":["Dragon"],"Heat Rotom":["Electric","Fire"],"Heatmor":["Fire"],"Heatran":["Fire","Steel"],"Heliolisk":["Electric","Normal"],"Helioptile":["Electric","Normal"],"Heracross":["Bug","Fighting"],"Herdier":["Normal"],"Hippopotas":["Ground"],"Hippowdon":["Ground"],"Hisuian Arcanine":["Fire","Rock"],"Hisuian Avalugg":["Ice","Rock"],"Hisuian Braviary":["Psychic","Flying"],"Hisuian Decidueye":["Grass","Fighting"],"Hisuian Electrode":["Electric","Grass"],"Hisuian Goodra":["Steel","Dragon"],"Hisuian Growlithe":["Fire","Rock"],"Hisuian Lilligant":["Grass","Fighting"],"Hisuian Qwilfish":["Dark","Poison"],"Hisuian Samurott":["Water","Dark"],"Hisuian Sliggoo":["Steel","Dragon"],"Hisuian Sneasel":["Fighting","Poison"],"Hisuian Typhlosion":["Fire","Ghost"],"Hisuian Voltorb":["Electric","Grass"],"Hisuian Zoroark":["Normal","Ghost"],"Hisuian Zorua":["Normal","Ghost"],"Hitmonchan":["Fighting"],"Hitmonlee":["Fighting"],"Hitmontop":["Fighting"],"Ho-Oh":["Fire","Flying"],"Honchkrow":["Dark","Flying"],"Honedge":["Steel","Ghost"],"Hoopa":["Psychic","Ghost"],"Hoopa Unbound":["Psychic","Dark"],"Hoothoot":["Normal","Flying"],"Hoppip":["Grass","Flying"],"Horsea":["Water"],"Houndoom":["Dark","Fire"],"Houndour":["Dark","Fire"],"Houndstone":["Ghost"],"Huntail":["Water"],"Hydrapple":["Grass","Dragon"],"Hydreigon":["Dark","Dragon"],"Hypno":["Psychic"],"Ice":["Ice"],"Igglybuff":["Normal","Fairy"],"Illumise":["Bug"],"Impidimp":["Dark","Fairy"],"Incineroar":["Fire","Dark"],"Indeedee":["Psychic","Normal"],"Infernape":["Fire","Fighting"],"Inkay":["Dark","Psychic"],"Inteleon":["Water"],"Iron Boulder":["Rock","Psychic"],"Iron Bundle":["Ice","Water"],"Iron Crown":["Steel","Psychic"],"Iron Hands":["Fighting","Electric"],"Iron Jugulis":["Dark","Flying"],"Iron Leaves":["Grass","Psychic"],"Iron Moth":["Fire","Poison"],"Iron Thorns":["Rock","Electric"],"Iron Treads":["Ground","Steel"],"Iron Valiant":["Fairy","Fighting"],"Ivysaur":["Grass","Poison"],"Jangmo-o":["Dragon"],"Jellicent":["Water","Ghost"],"Jigglypuff":["Normal","Fairy"],"Jirachi":["Steel","Psychic"],"Jolteon":["Electric"],"Joltik":["Bug","Electric"],"Jumpluff":["Grass","Flying"],"Jynx":["Ice","Psychic"],"Kabuto":["Rock","Water"],"Kabutops":["Rock","Water"],"Kadabra":["Psychic"],"Kakuna":["Bug","Poison"],"Kangaskhan":["Normal"],"Karrablast":["Bug"],"Kartana":["Grass","Steel"],"Kecleon":["Normal"],"Keldeo":["Water","Fighting"],"Kilowattrel":["Electric","Flying"],"Kingambit":["Dark","Steel"],"Kingdra":["Water","Dragon"],"Kingler":["Water"],"Kirlia":["Psychic","Fairy"],"Klang":["Steel"],"Klawf":["Rock"],"Kleavor":["Bug","Rock"],"Klefki":["Steel","Fairy"],"Klink":["Steel"],"Klinklang":["Steel"],"Koffing":["Poison"],"Komala":["Normal"],"Kommo-o":["Dragon","Fighting"],"Koraidon":["Fighting","Dragon"],"Krabby":["Water"],"Kricketot":["Bug"],"Kricketune":["Bug"],"Krokorok":["Ground","Dark"],"Krookodile":["Ground","Dark"],"Kubfu":["Fighting"],"Kyogre":["Water"],"Kyurem":["Dragon","Ice"],"Kyurem-Black":["Dragon","Ice"],"Kyurem-White":["Dragon","Ice"],"Lairon":["Steel","Rock"],"Lampent":["Ghost","Fire"],"Landorus":["Ground","Flying"],"Lanturn":["Water","Electric"],"Lapras":["Water","Ice"],"Larvesta":["Bug","Fire"],"Larvitar":["Rock","Ground"],"Latias":["Dragon","Psychic"],"Latios":["Dragon","Psychic"],"Leafeon":["Grass"],"Leavanny":["Bug","Grass"],"Lechonk":["Normal"],"Ledian":["Bug","Flying"],"Ledyba":["Bug","Flying"],"Lickilicky":["Normal"],"Lickitung":["Normal"],"Liepard":["Dark"],"Lileep":["Rock","Grass"],"Lilligant":["Grass"],"Lillipup":["Normal"],"Linoone":["Normal"],"Litleo":["Fire","Normal"],"Litten":["Fire"],"Litwick":["Ghost","Fire"],"Lokix":["Bug","Dark"],"Lombre":["Water","Grass"],"Lopunny":["Normal"],"Lotad":["Water","Grass"],"Loudred":["Normal"],"Lucario":["Fighting","Steel"],"Ludicolo":["Water","Grass"],"Lugia":["Psychic","Flying"],"Lumineon":["Water"],"Lunala":["Psychic","Ghost"],"Lunatone":["Rock","Psychic"],"Lurantis":["Grass"],"Luvdisc":["Water"],"Luxio":["Electric"],"Luxray":["Electric"],"Lycanroc":["Rock"],"Lycanroc-Dusk":["Rock"],"Lycanroc-Midnight":["Rock"],"Mabosstiff":["Dark"],"Machamp":["Fighting"],"Machoke":["Fighting"],"Machop":["Fighting"],"Magby":["Fire"],"Magcargo":["Fire","Rock"],"Magearna":["Steel","Fairy"],"Magikarp":["Water"],"Magmar":["Fire"],"Magmortar":["Fire"],"Magnemite":["Electric","Steel"],"Magneton":["Electric","Steel"],"Magnezone":["Electric","Steel"],"Makuhita":["Fighting"],"Malamar":["Dark","Psychic"],"Mamoswine":["Ice","Ground"],"Manaphy":["Water"],"Mandibuzz":["Dark","Flying"],"Manectric":["Electric"],"Mankey":["Fighting"],"Mantine":["Water","Flying"],"Mantyke":["Water","Flying"],"Maractus":["Grass"],"Mareanie":["Poison","Water"],"Mareep":["Electric"],"Marill":["Water","Fairy"],"Marowak":["Ground"],"Marshadow":["Fighting","Ghost"],"Marshtomp":["Water","Ground"],"Maschiff":["Dark"],"Masquerain":["Bug","Flying"],"Maushold":["Normal"],"Mawile":["Steel","Fairy"],"Medicham":["Fighting","Psychic"],"Meditite":["Fighting","Psychic"],"Mega Abomasnow":["Grass","Ice"],"Mega Absol":["Dark"],"Mega Aerodactyl":["Rock","Flying"],"Mega Aggron":["Steel"],"Mega Alakazam":["Psychic"],"Mega Altaria":["Dragon","Fairy"],"Mega Ampharos":["Electric","Dragon"],"Mega Audino":["Normal","Fairy"],"Mega Banette":["Ghost"],"Mega Beedrill":["Bug","Poison"],"Mega Blastoise":["Water"],"Mega Blaziken":["Fire","Fighting"],"Mega Camerupt":["Fire","Ground"],"Mega Charizard X":["Fire","Dragon"],"Mega Charizard Y":["Fire","Flying"],"Mega Diancie":["Rock","Fairy"],"Mega Gallade":["Psychic","Fighting"],"Mega Garchomp":["Dragon","Ground"],"Mega Gengar":["Ghost","Poison"],"Mega Glalie":["Ice"],"Mega Gyarados":["Water","Dark"],"Mega Heracross":["Bug","Fighting"],"Mega Houndoom":["Dark","Fire"],"Mega Kangaskhan":["Normal"],"Mega Latias":["Grass","Poison"],"Mega Latios":["Grass","Poison"],"Mega Lopunny":["Normal","Fighting"],"Mega Lucario":["Grass","Poison"],"Mega Manectric":["Electric"],"Mega Mawile":["Steel","Fairy"],"Mega Medicham":["Fighting","Psychic"],"Mega Metagross":["Steel","Psychic"],"Mega Mewtwo X":["Psychic","Fighting"],"Mega Mewtwo Y":["Psychic"],"Mega Pidgeot":["Normal","Flying"],"Mega Pinsir":["Bug","Flying"],"Mega Rayquaza":["Grass","Poison"],"Mega Sableye":["Dark","Ghost"],"Mega Salamence":["Dragon","Flying"],"Mega Sceptile":["Grass","Dragon"],"Mega Scizor":["Bug","Steel"],"Mega Sharpedo":["Grass","Poison"],"Mega Slowbro":["Water","Psychic"],"Mega Steelix":["Steel","Ground"],"Mega Swampert":["Water","Ground"],"Mega Tyranitar":["Rock","Dark"],"Mega Venusaur":["Grass","Poison"],"Meganium":["Grass"],"Melmetal":["Steel"],"Meloetta":["Normal","Psychic"],"Meloetta-Pirouette":["Normal","Fighting"],"Meltan":["Steel"],"Meowscarada":["Grass","Dark"],"Meowstic":["Psychic"],"Meowth":["Normal"],"Mesprit":["Psychic"],"Metagross":["Steel","Psychic"],"Metang":["Steel","Psychic"],"Metapod":["Bug"],"Mew":["Psychic"],"Mewtwo":["Psychic"],"Mienfoo":["Fighting"],"Mienshao":["Fighting"],"Mightyena":["Dark"],"Milcery":["Fairy"],"Milotic":["Water"],"Miltank":["Normal"],"Mime Jr.":["Psychic","Fairy"],"Mimikyu":["Ghost","Fairy"],"Minccino":["Normal"],"Minior":["Rock","Flying"],"Minun":["Electric"],"Miraidon":["Electric","Dragon"],"Misdreavus":["Ghost"],"Mismagius":["Ghost"],"Moltres":["Fire","Flying"],"Monferno":["Fire","Fighting"],"Morelull":["Grass","Fairy"],"Morgrem":["Dark","Fairy"],"Morpeko":["Electric","Dark"],"Mothim":["Bug","Flying"],"Mow Rotom":["Electric","Grass"],"Mr. Mime":["Psychic","Fairy"],"Mr. Rime":["Ice","Psychic"],"Mudbray":["Ground"],"Mudkip":["Water"],"Mudsdale":["Ground"],"Muk":["Poison"],"Munchlax":["Normal"],"Munkidori":["Poison","Psychic"],"Munna":["Psychic"],"Murkrow":["Dark","Flying"],"Musharna":["Psychic"],"Nacli":["Rock"],"Naclstack":["Rock"],"Naganadel":["Poison","Dragon"],"Natu":["Psychic","Flying"],"Necrozma":["Psychic"],"Necrozma-Dawn Wings":["Psychic","Ghost"],"Necrozma-Dusk Mane":["Psychic","Steel"],"Nickit":["Dark"],"Nidoking":["Poison","Ground"],"Nidoqueen":["Poison","Ground"],"Nidoran♀":["Poison"],"Nidoran♂":["Poison"],"Nidorina":["Poison"],"Nidorino":["Poison"],"Nihilego":["Rock","Poison"],"Nincada":["Bug","Ground"],"Ninetales":["Fire"],"Ninjask":["Bug","Flying"],"Noctowl":["Normal","Flying"],"Noibat":["Flying","Dragon"],"Noivern":["Flying","Dragon"],"Nosepass":["Rock"],"Numel":["Fire","Ground"],"Nuzleaf":["Grass","Dark"],"Nymble":["Bug"],"Obstagoon":["Dark","Normal"],"Octillery":["Water"],"Oddish":["Grass","Poison"],"Ogerpon":["Grass"],"Ogerpon Cornerstone":["Grass","Rock"],"Ogerpon Hearthflame":["Grass","Fire"],"Ogerpon Wellspring":["Grass","Water"],"Oinkologne":["Normal"],"Okidogi":["Poison","Fighting"],"Omanyte":["Rock","Water"],"Omastar":["Rock","Water"],"Onix":["Rock","Ground"],"Oranguru":["Normal","Psychic"],"Orbeetle":["Bug","Psychic"],"Oricorio":["Fire","Flying"],"Oricorio Pa\'u":["Psychic","Flying"],"Oricorio Pom-Pom":["Electric","Flying"],"Oricorio Sensu":["Ghost","Flying"],"Origin Dialga":["Steel","Dragon"],"Origin Palkia":["Water","Dragon"],"Orthworm":["Steel"],"Oshawott":["Water"],"Overqwil":["Dark","Poison"],"Pa\'u Style":["Psychic","Flying"],"Pachirisu":["Electric"],"Palafin":["Water"],"Paldean Tauros":["Fighting"],"Paldean Tauros Fire":["Fighting","Fire"],"Paldean Tauros Water":["Fighting","Water"],"Paldean Wooper":["Poison","Ground"],"Palkia":["Water","Dragon"],"Palossand":["Ghost","Ground"],"Palpitoad":["Water","Ground"],"Pancham":["Fighting"],"Pangoro":["Fighting","Dark"],"Panpour":["Water"],"Pansage":["Grass"],"Pansear":["Fire"],"Paras":["Bug","Grass"],"Parasect":["Bug","Grass"],"Passimian":["Fighting"],"Patrat":["Normal"],"Pawmi":["Electric"],"Pawmo":["Electric","Fighting"],"Pawmot":["Electric","Fighting"],"Pawniard":["Dark","Steel"],"Pecharunt":["Poison","Ghost"],"Pelipper":["Water","Flying"],"Perrserker":["Steel"],"Persian":["Normal"],"Petilil":["Grass"],"Phanpy":["Ground"],"Phantump":["Ghost","Grass"],"Pheromosa":["Bug","Fighting"],"Phione":["Water"],"Pichu":["Electric"],"Pidgeot":["Normal","Flying"],"Pidgeotto":["Normal","Flying"],"Pidgey":["Normal","Flying"],"Pidove":["Normal","Flying"],"Pignite":["Fire","Fighting"],"Pikachu":["Electric"],"Pikipek":["Normal","Flying"],"Piloswine":["Ice","Ground"],"Pincurchin":["Electric"],"Pineco":["Bug"],"Pinsir":["Bug"],"Piplup":["Water"],"Pirouette Forme":["Normal","Fighting"],"Plusle":["Electric"],"Poipole":["Poison"],"Poison":["Poison"],"Politoed":["Water"],"Poliwag":["Water"],"Poliwhirl":["Water"],"Poliwrath":["Water","Fighting"],"Poltchageist":["Grass","Ghost"],"Polteageist":["Ghost"],"Pom-Pom Style":["Electric","Flying"],"Ponyta":["Fire"],"Poochyena":["Dark"],"Popplio":["Water"],"Porygon":["Normal"],"Porygon-Z":["Normal"],"Porygon2":["Normal"],"Primal Groudon":["Ground","Fire"],"Primal Kyogre":["Water"],"Primarina":["Water","Fairy"],"Primeape":["Fighting"],"Prinplup":["Water"],"Probopass":["Rock","Steel"],"Psychic":["Psychic"],"Psyduck":["Water"],"Pumpkaboo":["Ghost","Grass"],"Pupitar":["Rock","Ground"],"Purrloin":["Dark"],"Purugly":["Normal"],"Pyroar":["Fire","Normal"],"Pyukumuku":["Water"],"Quagsire":["Water","Ground"],"Quaquaval":["Water","Fighting"],"Quaxly":["Water"],"Quaxwell":["Water"],"Quilava":["Fire"],"Quilladin":["Grass"],"Qwilfish":["Water","Poison"],"Raboot":["Fire"],"Rabsca":["Bug","Psychic"],"Raging Bolt":["Electric","Dragon"],"Raichu":["Electric"],"Raikou":["Electric"],"Rainy Form":["Water"],"Ralts":["Psychic","Fairy"],"Rampardos":["Rock"],"Rapidash":["Fire"],"Raticate":["Normal"],"Rattata":["Normal"],"Rayquaza":["Dragon","Flying"],"Regice":["Ice"],"Regidrago":["Dragon"],"Regieleki":["Electric"],"Regigigas":["Normal"],"Regirock":["Rock"],"Registeel":["Steel"],"Relicanth":["Water","Rock"],"Rellor":["Bug"],"Remoraid":["Water"],"Reshiram":["Dragon","Fire"],"Reuniclus":["Psychic"],"Revavroom":["Steel","Poison"],"Rhydon":["Ground","Rock"],"Rhyhorn":["Ground","Rock"],"Rhyperior":["Ground","Rock"],"Ribombee":["Bug","Fairy"],"Rillaboom":["Grass"],"Riolu":["Fighting"],"Roaring Moon":["Dragon","Dark"],"Rock":["Rock"],"Rockruff":["Rock"],"Roggenrola":["Rock"],"Rolycoly":["Rock"],"Rookidee":["Flying"],"Roselia":["Grass","Poison"],"Roserade":["Grass","Poison"],"Rotom":["Electric","Ghost"],"Rotom-Fan":["Electric","Flying"],"Rotom-Frost":["Electric","Ice"],"Rotom-Heat":["Electric","Fire"],"Rotom-Mow":["Electric","Grass"],"Rotom-Wash":["Electric","Water"],"Rowlet":["Grass","Flying"],"Rufflet":["Normal","Flying"],"Runerigus":["Ground","Ghost"],"Sableye":["Dark","Ghost"],"Salamence":["Dragon","Flying"],"Salandit":["Poison","Fire"],"Salazzle":["Poison","Fire"],"Samurott":["Water"],"Sandaconda":["Ground"],"Sandile":["Ground","Dark"],"Sandshrew":["Ground"],"Sandslash":["Ground"],"Sandy Cloak":["Bug","Ground"],"Sandy Shocks":["Electric","Ground"],"Sandygast":["Ghost","Ground"],"Sawk":["Fighting"],"Sawsbuck":["Normal","Grass"],"Scatterbug":["Bug"],"Sceptile":["Grass"],"Scizor":["Bug","Steel"],"Scolipede":["Bug","Poison"],"Scorbunny":["Fire"],"Scovillain":["Grass","Fire"],"Scrafty":["Dark","Fighting"],"Scraggy":["Dark","Fighting"],"Scream Tail":["Fairy","Psychic"],"Scyther":["Bug","Flying"],"Seadra":["Water"],"Seaking":["Water"],"Sealeo":["Ice","Water"],"Seedot":["Grass"],"Seel":["Water"],"Seismitoad":["Water","Ground"],"Sensu Style":["Ghost","Flying"],"Sentret":["Normal"],"Serperior":["Grass"],"Servine":["Grass"],"Seviper":["Poison"],"Sewaddle":["Bug","Grass"],"Sharpedo":["Water","Dark"],"Shaymin":["Grass"],"Shaymin-Sky":["Grass","Flying"],"Shedinja":["Bug","Ghost"],"Shelgon":["Dragon"],"Shellder":["Water"],"Shellos":["Water"],"Shelmet":["Bug"],"Shieldon":["Rock","Steel"],"Shiftry":["Grass","Dark"],"Shiinotic":["Grass","Fairy"],"Shinx":["Electric"],"Shroodle":["Poison","Normal"],"Shroomish":["Grass"],"Shuckle":["Bug","Rock"],"Shuppet":["Ghost"],"Sigilyph":["Psychic","Flying"],"Silcoon":["Bug"],"Silicobra":["Ground"],"Silvally":["Normal"],"Simipour":["Water"],"Simisage":["Grass"],"Simisear":["Fire"],"Sinistcha":["Grass","Ghost"],"Sinistea":["Ghost"],"Sirfetch\'d":["Fighting"],"Sizzlipede":["Fire","Bug"],"Skarmory":["Steel","Flying"],"Skeledirge":["Fire","Ghost"],"Skiddo":["Grass"],"Skiploom":["Grass","Flying"],"Skitty":["Normal"],"Skorupi":["Poison","Bug"],"Skrelp":["Poison","Water"],"Skuntank":["Poison","Dark"],"Skwovet":["Normal"],"Sky Forme":["Grass","Flying"],"Slaking":["Normal"],"Slakoth":["Normal"],"Sliggoo":["Dragon"],"Slither Wing":["Bug","Fighting"],"Slowbro":["Water","Psychic"],"Slowking":["Water","Psychic"],"Slowpoke":["Water","Psychic"],"Slugma":["Fire"],"Slurpuff":["Fairy"],"Smeargle":["Normal"],"Smoliv":["Grass","Normal"],"Smoochum":["Ice","Psychic"],"Sneasel":["Dark","Ice"],"Sneasler":["Fighting","Poison"],"Snivy":["Grass"],"Snom":["Ice","Bug"],"Snorlax":["Normal"],"Snorunt":["Ice"],"Snowy Form":["Ice"],"Snubbull":["Fairy"],"Sobble":["Water"],"Solgaleo":["Psychic","Steel"],"Solosis":["Psychic"],"Solrock":["Rock","Psychic"],"Spearow":["Normal","Flying"],"Spectrier":["Ghost"],"Spewpa":["Bug"],"Spheal":["Ice","Water"],"Spidops":["Bug"],"Spinarak":["Bug","Poison"],"Spinda":["Normal"],"Spiritomb":["Ghost","Dark"],"Spoink":["Psychic"],"Sprigatito":["Grass"],"Spritzee":["Fairy"],"Squawkabilly":["Normal","Flying"],"Squirtle":["Water"],"Stakataka":["Rock","Steel"],"Stantler":["Normal"],"Staraptor":["Normal","Flying"],"Staravia":["Normal","Flying"],"Starly":["Normal","Flying"],"Starmie":["Water","Psychic"],"Staryu":["Water"],"Steel":["Steel"],"Steelix":["Steel","Ground"],"Steenee":["Grass"],"Stonjourner":["Rock"],"Stoutland":["Normal"],"Stufful":["Normal","Fighting"],"Stunfisk":["Ground","Electric"],"Stunky":["Poison","Dark"],"Sudowoodo":["Rock"],"Suicune":["Water"],"Sunflora":["Grass"],"Sunkern":["Grass"],"Sunny Form":["Fire"],"Surskit":["Bug","Water"],"Swablu":["Normal","Flying"],"Swadloon":["Bug","Grass"],"Swalot":["Poison"],"Swampert":["Water","Ground"],"Swanna":["Water","Flying"],"Swellow":["Normal","Flying"],"Swinub":["Ice","Ground"],"Swirlix":["Fairy"],"Swoobat":["Psychic","Flying"],"Sylveon":["Fairy"],"Tadbulb":["Electric"],"Taillow":["Normal","Flying"],"Talonflame":["Fire","Flying"],"Tandemaus":["Normal"],"Tangela":["Grass"],"Tangrowth":["Grass"],"Tapu Bulu":["Grass","Fairy"],"Tapu Fini":["Water","Fairy"],"Tapu Koko":["Electric","Fairy"],"Tapu Lele":["Psychic","Fairy"],"Tarountula":["Bug"],"Tatsugiri":["Dragon","Water"],"Tauros":["Normal"],"Teddiursa":["Normal"],"Tentacool":["Water","Poison"],"Tentacruel":["Water","Poison"],"Tepig":["Fire"],"Terapagos":["Normal"],"Terrakion":["Rock","Fighting"],"Thievul":["Dark"],"Throh":["Fighting"],"Thundurus":["Electric","Flying"],"Thwackey":["Grass"],"Timburr":["Fighting"],"Ting-Lu":["Dark","Ground"],"Tinkatink":["Fairy","Steel"],"Tinkaton":["Fairy","Steel"],"Tinkatuff":["Fairy","Steel"],"Tirtouga":["Water","Rock"],"Toedscool":["Ground","Grass"],"Toedscruel":["Ground","Grass"],"Togedemaru":["Electric","Steel"],"Togekiss":["Fairy","Flying"],"Togepi":["Fairy"],"Togetic":["Fairy","Flying"],"Torchic":["Fire"],"Torkoal":["Fire"],"Tornadus":["Flying"],"Torracat":["Fire"],"Torterra":["Grass","Ground"],"Totodile":["Water"],"Toucannon":["Normal","Flying"],"Toxapex":["Poison","Water"],"Toxel":["Electric","Poison"],"Toxicroak":["Poison","Fighting"],"Toxtricity":["Electric","Poison"],"Tranquill":["Normal","Flying"],"Trapinch":["Ground"],"Trash Cloak":["Bug","Steel"],"Treecko":["Grass"],"Trevenant":["Ghost","Grass"],"Tropius":["Grass","Flying"],"Trubbish":["Poison"],"Trumbeak":["Normal","Flying"],"Tsareena":["Grass"],"Turtonator":["Fire","Dragon"],"Turtwig":["Grass"],"Tympole":["Water"],"Tynamo":["Electric"],"Type: Null":["Normal"],"Typhlosion":["Fire"],"Tyranitar":["Rock","Dark"],"Tyrantrum":["Rock","Dragon"],"Tyrogue":["Fighting"],"Tyrunt":["Rock","Dragon"],"Ultra Necrozma":["Psychic","Dragon"],"Umbreon":["Dark"],"Unfezant":["Normal","Flying"],"Unown":["Psychic"],"Ursaluna":["Ground","Normal"],"Ursaring":["Normal"],"Urshifu":["Fighting","Dark"],"Urshifu-Rapid":["Fighting","Water"],"Uxie":["Psychic"],"Vanillish":["Ice"],"Vanillite":["Ice"],"Vanilluxe":["Ice"],"Vaporeon":["Water"],"Varoom":["Steel","Poison"],"Veluza":["Water","Psychic"],"Venipede":["Bug","Poison"],"Venomoth":["Bug","Poison"],"Venonat":["Bug","Poison"],"Venusaur":["Grass","Poison"],"Vespiquen":["Bug","Flying"],"Vibrava":["Ground","Dragon"],"Victini":["Psychic","Fire"],"Victreebel":["Grass","Poison"],"Vigoroth":["Normal"],"Vikavolt":["Bug","Electric"],"Vileplume":["Grass","Poison"],"Virizion":["Grass","Fighting"],"Vivillon":["Bug","Flying"],"Volbeat":["Bug"],"Volcanion":["Fire","Water"],"Volcarona":["Bug","Fire"],"Voltorb":["Electric"],"Vullaby":["Dark","Flying"],"Vulpix":["Fire"],"Wailmer":["Water"],"Wailord":["Water"],"Walking Wake":["Water","Dragon"],"Walrein":["Ice","Water"],"Wartortle":["Water"],"Wash Rotom":["Electric","Water"],"Watchog":["Normal"],"Water":["Water"],"Wattrel":["Electric","Flying"],"Weavile":["Dark","Ice"],"Weedle":["Bug","Poison"],"Weepinbell":["Grass","Poison"],"Weezing":["Poison"],"Whimsicott":["Grass","Fairy"],"Whirlipede":["Bug","Poison"],"Whiscash":["Water","Ground"],"Whismur":["Normal"],"Wigglytuff":["Normal","Fairy"],"Wiglett":["Water"],"Wimpod":["Bug","Water"],"Wingull":["Water","Flying"],"Wishiwashi":["Water"],"Wo-Chien":["Dark","Grass"],"Wobbuffet":["Psychic"],"Woobat":["Psychic","Flying"],"Wooloo":["Normal"],"Wooper":["Water","Ground"],"Wormadam":["Bug","Grass"],"Wugtrio":["Water"],"Wurmple":["Bug"],"Wynaut":["Psychic"],"Wyrdeer":["Normal","Psychic"],"Xatu":["Psychic","Flying"],"Xerneas":["Fairy"],"Xurkitree":["Electric"],"Yamask":["Ghost"],"Yamper":["Electric"],"Yanma":["Bug","Flying"],"Yanmega":["Bug","Flying"],"Yungoos":["Normal"],"Yveltal":["Dark","Flying"],"Zacian":["Fairy"],"Zacian-Crowned":["Fairy","Steel"],"Zamazenta":["Fighting"],"Zamazenta-Crowned":["Fighting","Steel"],"Zangoose":["Normal"],"Zapdos":["Electric","Flying"],"Zarude":["Dark","Grass"],"Zebstrika":["Electric"],"Zekrom":["Dragon","Electric"],"Zen Mode":["Fire","Psychic"],"Zeraora":["Electric"],"Zigzagoon":["Normal"],"Zoroark":["Dark"],"Zorua":["Dark"],"Zubat":["Poison","Flying"],"Zweilous":["Dark","Dragon"],"Zygarde":["Dragon","Ground"],"Zygarde-10%":["Dragon","Ground"],"Zygarde-Complete":["Dragon","Ground"]};
+
+// ─── ABILITY EFFECTS (scored dynamically) ───
+// passiveHeal: % per turn, typeImmune: absorbs type, noChip: ignores residual, prioritySetup: +1 priority on setup
+// dmgHalvedFull: Multiscale, intimidate: -Atk, snowball: boost on KO, speedBoost: +Spe/turn
+// reflectDrops: Mirror Armor, blockBombs: Bulletproof, contactDmg: Iron Barbs, contactBurn: Flame Body
+// statusCure: Natural Cure on switch, regenerator: 33% heal on switch
+
+// ─── COUNTER POOL ───
+const CP = [
+  // CM
+  {name:"Raging Bolt",types:["Electric","Dragon"],ability:"Protosynthesis",item:"Booster Energy",hp:125,def:91,spd:100,spa:137,spe:75,setupType:"cm",
+    fx:[{type:"snowball",desc:"Protosynthesis boosts highest stat in sun/with Booster Energy"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Thunderbolt",t:"Electric",cat:"stab"},{n:"Thunderclap",t:"Electric",cat:"stab_priority"},{n:"Dragon Pulse",t:"Dragon",cat:"stab"},{n:"Draco Meteor",t:"Dragon",cat:"stab"},{n:"Rest",t:"Psychic",cat:"sustain"},{n:"Sleep Talk",t:"Normal",cat:"utility_rest"}],
+    stab:["Electric","Dragon"],note:"137 Sp.Atk powerhouse. Thunderclap is STAB priority. Protosynthesis + Booster Energy pushes Sp.Atk even higher. CM makes it tanky enough to muscle through most bosses."},
+  {name:"Celebi",types:["Psychic","Grass"],ability:"Natural Cure",item:"Leftovers",hp:100,def:100,spd:100,spa:100,spe:100,setupType:"cm",
+    fx:[{type:"raidNote",desc:"Natural Cure useless in raids (no switching)"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Leech Seed",t:"Grass",cat:"sustain"},{n:"Recover",t:"Normal",cat:"sustain"},{n:"Giga Drain",t:"Grass",cat:"stab_sustain"},{n:"Psychic",t:"Psychic",cat:"stab"},{n:"Earth Power",t:"Ground",cat:"coverage"},{n:"Dazzling Gleam",t:"Fairy",cat:"coverage"},{n:"Shadow Ball",t:"Ghost",cat:"coverage"}],
+    stab:["Psychic","Grass"],note:"Quad sustain: Leech Seed + Recover + Giga Drain + Leftovers. Natural Cure useless in raids (no switching)."},
+  {name:"Suicune",types:["Water"],ability:"Pressure",item:"Leftovers",hp:100,def:115,spd:115,spa:90,spe:85,setupType:"cm",
+    fx:[{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"},{type:"ppPressure",desc:"Pressure drains boss PP twice as fast"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Rest",t:"Psychic",cat:"sustain"},{n:"Sleep Talk",t:"Normal",cat:"utility_rest"},{n:"Scald",t:"Water",cat:"stab"},{n:"Ice Beam",t:"Ice",cat:"coverage"},{n:"Air Slash",t:"Flying",cat:"coverage"}],
+    stab:["Water"],note:"CroCune (CM + Rest + Sleep Talk). Pressure depletes boss PP fast. Leftovers adds passive healing. Incredible bulk."},
+  {name:"Cresselia",types:["Psychic"],ability:"Levitate",item:"Leftovers",hp:120,def:120,spd:130,spa:75,spe:85,setupType:"cm",
+    fx:[{type:"typeImmune",val:"Ground",desc:"Levitate: immune to Ground"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Moonlight",t:"Fairy",cat:"sustain"},{n:"Psychic",t:"Psychic",cat:"stab"},{n:"Ice Beam",t:"Ice",cat:"coverage"},{n:"Moonblast",t:"Fairy",cat:"coverage"},{n:"Rest",t:"Psychic",cat:"sustain"}],
+    stab:["Psychic"],note:"Insane bulk + Levitate Ground immunity + Leftovers. Moonlight recovery. One of the hardest mons to kill."},
+  {name:"Clefable",types:["Fairy"],ability:"Magic Guard",item:"Life Orb",hp:95,def:73,spd:90,spa:95,spe:60,setupType:"cm",
+    fx:[{type:"noChip",desc:"Magic Guard: immune to all residual damage (poison, burn, hazards, weather, Life Orb recoil)"},{type:"freeLifeOrb",desc:"Life Orb 30% damage boost with zero recoil"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Soft-Boiled",t:"Normal",cat:"sustain"},{n:"Moonblast",t:"Fairy",cat:"stab"},{n:"Flamethrower",t:"Fire",cat:"coverage"},{n:"Ice Beam",t:"Ice",cat:"coverage"},{n:"Thunderbolt",t:"Electric",cat:"coverage"},{n:"Stored Power",t:"Psychic",cat:"coverage"}],
+    stab:["Fairy"],note:"Magic Guard + Life Orb = 30% damage boost with ZERO recoil. Immune to all chip. Soft-Boiled recovery. Unaware variant ignores boss boosts instead."},
+  {name:"Reuniclus",types:["Psychic"],ability:"Magic Guard",item:"Life Orb",hp:110,def:75,spd:85,spa:125,spe:30,setupType:"cm",
+    fx:[{type:"noChip",desc:"Magic Guard: immune to all residual damage"},{type:"freeLifeOrb",desc:"Life Orb 30% boost, no recoil"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Recover",t:"Normal",cat:"sustain"},{n:"Psyshock",t:"Psychic",cat:"stab"},{n:"Focus Blast",t:"Fighting",cat:"coverage"},{n:"Shadow Ball",t:"Ghost",cat:"coverage"},{n:"Energy Ball",t:"Grass",cat:"coverage"}],
+    stab:["Psychic"],note:"Magic Guard + Life Orb = free 30% damage. 125 Sp.Atk. Recover for sustain. Slow but unkillable after CMs."},
+  {name:"Celesteela",types:["Steel","Flying"],ability:"Beast Boost",item:"Leftovers",hp:97,def:103,spd:101,spa:107,spe:61,setupType:"cm",
+    fx:[{type:"snowball",desc:"Beast Boost: +1 to highest stat on KO"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Leech Seed",t:"Grass",cat:"sustain"},{n:"Flash Cannon",t:"Steel",cat:"stab"},{n:"Air Slash",t:"Flying",cat:"stab"},{n:"Flamethrower",t:"Fire",cat:"coverage"},{n:"Energy Ball",t:"Grass",cat:"coverage"}],
+    stab:["Steel","Flying"],note:"Leech Seed + Leftovers + CM. 9 resistances + Ground immunity. Beast Boost snowballs after KOs."},
+  {name:"Latias",types:["Dragon","Psychic"],ability:"Levitate",item:"Leftovers",hp:80,def:90,spd:130,spa:110,spe:110,setupType:"cm",
+    fx:[{type:"typeImmune",val:"Ground",desc:"Levitate: immune to Ground"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Recover",t:"Normal",cat:"sustain"},{n:"Psyshock",t:"Psychic",cat:"stab"},{n:"Dragon Pulse",t:"Dragon",cat:"stab"},{n:"Thunderbolt",t:"Electric",cat:"coverage"},{n:"Mystical Fire",t:"Fire",cat:"coverage"},{n:"Surf",t:"Water",cat:"coverage"},{n:"Energy Ball",t:"Grass",cat:"coverage"}],
+    stab:["Dragon","Psychic"],note:"130 Sp.Def + Levitate + Recover + Leftovers. Nearly invincible special side after CMs."},
+  {name:"Tapu Fini",types:["Water","Fairy"],ability:"Misty Surge",item:"Leftovers",hp:70,def:115,spd:130,spa:95,spe:85,setupType:"cm",
+    fx:[{type:"statusBlock",desc:"Misty Terrain: blocks all status conditions for grounded Pokémon"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Draining Kiss",t:"Fairy",cat:"stab_sustain"},{n:"Surf",t:"Water",cat:"stab"},{n:"Moonblast",t:"Fairy",cat:"stab"},{n:"Ice Beam",t:"Ice",cat:"coverage"},{n:"Grass Knot",t:"Grass",cat:"coverage"},{n:"Rest",t:"Psychic",cat:"sustain"}],
+    stab:["Water","Fairy"],note:"Misty Terrain = full status immunity. Water/Fairy resists a ton. Leftovers + Draining Kiss sustain."},
+  {name:"Florges",types:["Fairy"],ability:"Flower Veil",item:"Leftovers",hp:78,def:68,spd:154,spa:112,spe:75,setupType:"cm",
+    fx:[{type:"statusBlock",desc:"Flower Veil: prevents stat reduction and status from opponents"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Synthesis",t:"Grass",cat:"sustain"},{n:"Draining Kiss",t:"Fairy",cat:"stab_sustain"},{n:"Moonblast",t:"Fairy",cat:"stab"},{n:"Psychic",t:"Psychic",cat:"coverage"},{n:"Energy Ball",t:"Grass",cat:"coverage"}],
+    stab:["Fairy"],note:"154 Sp.Def — highest of any Fairy. Flower Veil blocks stat drops and status. Leftovers + Synthesis."},
+  {name:"Slowking",types:["Water","Psychic"],ability:"Regenerator",item:"Leftovers",hp:95,def:80,spd:110,spa:100,spe:30,setupType:"cm",
+    fx:[{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"},{type:"raidNote",desc:"Regenerator useless in raids (no switching)"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Slack Off",t:"Normal",cat:"sustain"},{n:"Scald",t:"Water",cat:"stab"},{n:"Psychic",t:"Psychic",cat:"stab"},{n:"Ice Beam",t:"Ice",cat:"coverage"},{n:"Flamethrower",t:"Fire",cat:"coverage"},{n:"Grass Knot",t:"Grass",cat:"coverage"}],
+    stab:["Water","Psychic"],note:"Slack Off for reliable recovery. Leftovers passive heal. Good bulk + wide coverage. Regenerator wasted in raids."},
+  {name:"Galarian Slowking",types:["Poison","Psychic"],ability:"Regenerator",item:"Leftovers",hp:95,def:80,spd:110,spa:110,spe:30,setupType:"cm",
+    fx:[{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"},{type:"raidNote",desc:"Regenerator useless in raids (no switching)"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Slack Off",t:"Normal",cat:"sustain"},{n:"Sludge Bomb",t:"Poison",cat:"stab"},{n:"Psychic",t:"Psychic",cat:"stab"},{n:"Flamethrower",t:"Fire",cat:"coverage"},{n:"Ice Beam",t:"Ice",cat:"coverage"},{n:"Shadow Ball",t:"Ghost",cat:"coverage"}],
+    stab:["Poison","Psychic"],note:"Slack Off + Leftovers sustain. Poison typing gives Fairy/Grass/Fighting resists. Regenerator wasted in raids."},
+  {name:"Whimsicott",types:["Grass","Fairy"],ability:"Prankster",item:"Leftovers",hp:60,def:85,spd:75,spa:77,spe:116,setupType:"cm",
+    fx:[{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"},{type:"raidNote",desc:"Prankster priority irrelevant in raids (no speed mechanic)"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Leech Seed",t:"Grass",cat:"sustain"},{n:"Giga Drain",t:"Grass",cat:"stab_sustain"},{n:"Moonblast",t:"Fairy",cat:"stab"},{n:"Hurricane",t:"Flying",cat:"coverage"},{n:"Psychic",t:"Psychic",cat:"coverage"}],
+    stab:["Grass","Fairy"],note:"Prankster = priority Leech Seed (always goes first). Leftovers stacks with Leech Seed + Giga Drain."},
+  {name:"Primarina",types:["Water","Fairy"],ability:"Liquid Voice",item:"Leftovers",hp:80,def:74,spd:116,spa:126,spe:60,setupType:"cm",
+    fx:[{type:"moveTypeChange",desc:"Liquid Voice: sound moves become Water STAB"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Draining Kiss",t:"Fairy",cat:"stab_sustain"},{n:"Sparkling Aria",t:"Water",cat:"stab"},{n:"Moonblast",t:"Fairy",cat:"stab"},{n:"Ice Beam",t:"Ice",cat:"coverage"},{n:"Psychic",t:"Psychic",cat:"coverage"},{n:"Energy Ball",t:"Grass",cat:"coverage"},{n:"Rest",t:"Psychic",cat:"sustain"}],
+    stab:["Water","Fairy"],note:"126 Sp.Atk + Water/Fairy typing. Liquid Voice makes Hyper Voice a Water STAB move. Leftovers sustain."},
+  {name:"Spectrier",types:["Ghost"],ability:"Grim Neigh",item:"Leftovers",hp:100,def:60,spd:80,spa:145,spe:130,setupType:"cm",
+    fx:[{type:"snowball",desc:"Grim Neigh: +1 Sp.Atk on KO — snowballs damage"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Rest",t:"Psychic",cat:"sustain"},{n:"Shadow Ball",t:"Ghost",cat:"stab"},{n:"Dark Pulse",t:"Dark",cat:"coverage"},{n:"Mud Shot",t:"Ground",cat:"coverage"}],
+    stab:["Ghost"],note:"145 Sp.Atk + 130 Speed. Grim Neigh snowballs Sp.Atk after KOs. CM patches Sp.Def. Glass cannon."},
+  {name:"Armarouge",types:["Fire","Psychic"],ability:"Flash Fire",item:"Leftovers",hp:85,def:100,spd:80,spa:125,spe:75,setupType:"cm",
+    fx:[{type:"typeImmune",val:"Fire",desc:"Flash Fire: immune to Fire moves, boosts own Fire moves by 50%"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Rest",t:"Psychic",cat:"sustain"},{n:"Armor Cannon",t:"Fire",cat:"stab"},{n:"Psychic",t:"Psychic",cat:"stab"},{n:"Aura Sphere",t:"Fighting",cat:"coverage"},{n:"Energy Ball",t:"Grass",cat:"coverage"},{n:"Shadow Ball",t:"Ghost",cat:"coverage"}],
+    stab:["Fire","Psychic"],note:"Flash Fire = Fire immunity + 50% Fire damage boost. Amazing vs Fire bosses. 100 Def + CM Sp.Def."},
+  {name:"Raikou",types:["Electric"],ability:"Pressure",item:"Leftovers",hp:90,def:75,spd:100,spa:115,spe:115,setupType:"cm",
+    fx:[{type:"ppPressure",desc:"Pressure drains boss PP twice as fast"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Rest",t:"Psychic",cat:"sustain"},{n:"Thunderbolt",t:"Electric",cat:"stab"},{n:"Shadow Ball",t:"Ghost",cat:"coverage"},{n:"Aura Sphere",t:"Fighting",cat:"coverage"},{n:"Scald",t:"Water",cat:"coverage"}],
+    stab:["Electric"],note:"Fast CM sweeper. Pressure drains boss PP. Leftovers stacks with Rest."},
+  {name:"Jirachi",types:["Steel","Psychic"],ability:"Serene Grace",item:"Leftovers",hp:100,def:100,spd:100,spa:100,spe:100,setupType:"cm",
+    fx:[{type:"doubleSecondary",desc:"Serene Grace: double chance for secondary effects (flinch, burn, freeze etc.)"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Wish",t:"Normal",cat:"sustain"},{n:"Psychic",t:"Psychic",cat:"stab"},{n:"Flash Cannon",t:"Steel",cat:"stab"},{n:"Thunderbolt",t:"Electric",cat:"coverage"},{n:"Energy Ball",t:"Grass",cat:"coverage"}],
+    stab:["Steel","Psychic"],note:"9 resistances + Poison immunity. Serene Grace = 60% flinch Iron Head, 20% SpDef drop Flash Cannon."},
+  {name:"Hatterene",types:["Psychic","Fairy"],ability:"Magic Bounce",item:"Leftovers",hp:57,def:95,spd:103,spa:136,spe:29,setupType:"cm",
+    fx:[{type:"magicBounce",desc:"Magic Bounce: reflects status moves, hazards, Taunt, etc. back at the boss"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Draining Kiss",t:"Fairy",cat:"stab_sustain"},{n:"Psyshock",t:"Psychic",cat:"stab"},{n:"Mystical Fire",t:"Fire",cat:"coverage"},{n:"Shadow Ball",t:"Ghost",cat:"coverage"},{n:"Rest",t:"Psychic",cat:"sustain"}],
+    stab:["Psychic","Fairy"],note:"Magic Bounce reflects status/hazards back at boss. 136 Sp.Atk. Very slow but tanky after CM."},
+  {name:"Togekiss",types:["Fairy","Flying"],ability:"Serene Grace",item:"Leftovers",hp:85,def:95,spd:115,spa:120,spe:80,setupType:"cm",
+    fx:[{type:"doubleSecondary",desc:"Serene Grace: Air Slash = 60% flinch chance"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Roost",t:"Flying",cat:"sustain"},{n:"Air Slash",t:"Flying",cat:"stab"},{n:"Dazzling Gleam",t:"Fairy",cat:"stab"},{n:"Flamethrower",t:"Fire",cat:"coverage"},{n:"Aura Sphere",t:"Fighting",cat:"coverage"}],
+    stab:["Fairy","Flying"],note:"Serene Grace Air Slash = 60% FLINCH. Boss can't attack half the time. Roost + Leftovers sustain."},
+  {name:"Roserade",types:["Grass","Poison"],ability:"Natural Cure",item:"Leftovers",hp:60,def:65,spd:105,spa:125,spe:90,setupType:"cm",
+    fx:[{type:"raidNote",desc:"Natural Cure useless in raids (no switching)"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Leech Seed",t:"Grass",cat:"sustain"},{n:"Giga Drain",t:"Grass",cat:"stab_sustain"},{n:"Synthesis",t:"Grass",cat:"sustain"},{n:"Sludge Bomb",t:"Poison",cat:"stab"},{n:"Shadow Ball",t:"Ghost",cat:"coverage"},{n:"Dazzling Gleam",t:"Fairy",cat:"coverage"}],
+    stab:["Grass","Poison"],note:"125 Sp.Atk + Leech Seed + Giga Drain + Leftovers + Synthesis. Natural Cure useless in raids."},
+  {name:"Serperior",types:["Grass"],ability:"Contrary",item:"Leftovers",hp:75,def:95,spd:95,spa:75,spe:113,setupType:"cm",
+    fx:[{type:"contrary",desc:"Contrary: Leaf Storm BOOSTS Sp.Atk by +2 instead of dropping it"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Leech Seed",t:"Grass",cat:"sustain"},{n:"Leaf Storm",t:"Grass",cat:"stab"},{n:"Giga Drain",t:"Grass",cat:"stab_sustain"},{n:"Dragon Pulse",t:"Dragon",cat:"coverage"},{n:"Hidden Power Fire",t:"Fire",cat:"coverage"}],
+    stab:["Grass"],note:"Contrary Leaf Storm = +2 Sp.Atk EVERY USE. Stacks with CM. Leech Seed + Leftovers sustain."},
+  {name:"Blissey",types:["Normal"],ability:"Natural Cure",item:"Leftovers",hp:255,def:10,spd:135,spa:75,spe:55,setupType:"cm",
+    fx:[{type:"raidNote",desc:"Natural Cure useless in raids (no switching)"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Calm Mind",t:"Psychic",cat:"setup"},{n:"Soft-Boiled",t:"Normal",cat:"sustain"},{n:"Flamethrower",t:"Fire",cat:"coverage"},{n:"Ice Beam",t:"Ice",cat:"coverage"},{n:"Thunderbolt",t:"Electric",cat:"coverage"},{n:"Seismic Toss",t:"Fighting",cat:"coverage"}],
+    stab:["Normal"],note:"255 HP + 135 Sp.Def. Leftovers heals massive HP. Unkillable vs special. Terrible vs physical."},
+  // BU
+  {name:"Breloom",types:["Grass","Fighting"],ability:"Poison Heal",item:"Toxic Orb",hp:60,def:80,spd:60,spa:60,spe:70,setupType:"bu",
+    fx:[{type:"passiveHeal",val:12.5,desc:"Poison Heal + Toxic Orb: heals 12.5% HP per turn (better than Leftovers!)"},{type:"statusImmune",desc:"Already poisoned = immune to burn/sleep/paralysis"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Leech Seed",t:"Grass",cat:"sustain"},{n:"Drain Punch",t:"Fighting",cat:"stab_sustain"},{n:"Mach Punch",t:"Fighting",cat:"stab_priority"},{n:"Seed Bomb",t:"Grass",cat:"stab"},{n:"Rock Tomb",t:"Rock",cat:"coverage"},{n:"Thunder Punch",t:"Electric",cat:"coverage"}],
+    stab:["Grass","Fighting"],note:"Poison Heal + Toxic Orb = 12.5% HP/turn (2x Leftovers!) AND immune to other status. Leech Seed + Drain Punch stack on top. Technician Mach Punch for priority."},
+  {name:"Chesnaught",types:["Grass","Fighting"],ability:"Bulletproof",item:"Leftovers",hp:88,def:122,spd:75,spa:74,spe:64,setupType:"bu",
+    fx:[{type:"blockBombs",desc:"Bulletproof: immune to Shadow Ball, Sludge Bomb, Energy Ball, Focus Blast, etc."},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Leech Seed",t:"Grass",cat:"sustain"},{n:"Drain Punch",t:"Fighting",cat:"stab_sustain"},{n:"Synthesis",t:"Grass",cat:"sustain"},{n:"Wood Hammer",t:"Grass",cat:"stab"},{n:"Earthquake",t:"Ground",cat:"coverage"},{n:"Stone Edge",t:"Rock",cat:"coverage"}],
+    stab:["Grass","Fighting"],note:"Bulletproof = immune to Shadow Ball, Sludge Bomb, Focus Blast, etc. 122 Def + Leech Seed + Drain Punch + Leftovers."},
+  {name:"Corviknight",types:["Flying","Steel"],ability:"Mirror Armor",item:"Leftovers",hp:98,def:105,spd:85,spa:53,spe:67,setupType:"bu",
+    fx:[{type:"reflectDrops",desc:"Mirror Armor: reflects all stat drops back at the boss"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Roost",t:"Flying",cat:"sustain"},{n:"Body Press",t:"Fighting",cat:"coverage"},{n:"Brave Bird",t:"Flying",cat:"stab"},{n:"Iron Head",t:"Steel",cat:"stab"}],
+    stab:["Flying","Steel"],note:"Mirror Armor bounces all stat drops back. 9 resistances + 2 immunities. Body Press scales with Def (insane after Bulk Ups). Roost + Leftovers."},
+  {name:"Conkeldurr",types:["Fighting"],ability:"Guts",item:"Flame Orb",hp:105,def:95,spd:65,spa:55,spe:45,setupType:"bu",
+    fx:[{type:"gutsBurn",desc:"Guts + Flame Orb: 50% Attack boost AND immune to other status (burn doesn't reduce Atk with Guts)"},{type:"statusImmune",desc:"Already burned = immune to sleep/freeze/paralysis"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Drain Punch",t:"Fighting",cat:"stab_sustain"},{n:"Mach Punch",t:"Fighting",cat:"stab_priority"},{n:"Ice Punch",t:"Ice",cat:"coverage"},{n:"Thunder Punch",t:"Electric",cat:"coverage"},{n:"Earthquake",t:"Ground",cat:"coverage"},{n:"Knock Off",t:"Dark",cat:"coverage"}],
+    stab:["Fighting"],note:"Guts + Flame Orb = 50% Atk boost on 140 base Atk. Burns but Guts ignores the Atk drop. Immune to other status. Drain Punch sustain."},
+  {name:"Buzzwole",types:["Bug","Fighting"],ability:"Beast Boost",item:"Leftovers",hp:107,def:139,spd:53,spa:53,spe:79,setupType:"bu",
+    fx:[{type:"snowball",desc:"Beast Boost: +1 to highest stat after each KO"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Drain Punch",t:"Fighting",cat:"stab_sustain"},{n:"Leech Life",t:"Bug",cat:"stab_sustain"},{n:"Roost",t:"Flying",cat:"sustain"},{n:"Ice Punch",t:"Ice",cat:"coverage"},{n:"Thunder Punch",t:"Electric",cat:"coverage"},{n:"Earthquake",t:"Ground",cat:"coverage"}],
+    stab:["Bug","Fighting"],note:"139 Atk + 139 Def. Beast Boost snowballs. Triple sustain: Drain Punch + Leech Life + Roost + Leftovers."},
+  {name:"Dragonite",types:["Dragon","Flying"],ability:"Multiscale",item:"Leftovers",hp:91,def:95,spd:100,spa:100,spe:80,setupType:"bu",
+    fx:[{type:"dmgHalved",desc:"Multiscale: takes HALF damage when at full HP — guarantees at least one free Bulk Up"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Roost",t:"Flying",cat:"sustain"},{n:"Dragon Claw",t:"Dragon",cat:"stab"},{n:"Earthquake",t:"Ground",cat:"coverage"},{n:"Fire Punch",t:"Fire",cat:"coverage"},{n:"Ice Punch",t:"Ice",cat:"coverage"},{n:"Thunder Punch",t:"Electric",cat:"coverage"},{n:"Aerial Ace",t:"Flying",cat:"stab"}],
+    stab:["Dragon","Flying"],note:"Multiscale = half damage at full HP = guaranteed setup. Roost back to full to reactivate. Leftovers chip helps."},
+  {name:"Kommo-o",types:["Dragon","Fighting"],ability:"Bulletproof",item:"Leftovers",hp:75,def:125,spd:105,spa:100,spe:85,setupType:"bu",
+    fx:[{type:"blockBombs",desc:"Bulletproof: immune to Shadow Ball, Sludge Bomb, Focus Blast, etc."},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Drain Punch",t:"Fighting",cat:"stab_sustain"},{n:"Dragon Claw",t:"Dragon",cat:"stab"},{n:"Poison Jab",t:"Poison",cat:"coverage"},{n:"Earthquake",t:"Ground",cat:"coverage"},{n:"Ice Punch",t:"Ice",cat:"coverage"},{n:"Thunder Punch",t:"Electric",cat:"coverage"}],
+    stab:["Dragon","Fighting"],note:"Bulletproof blocks ball/bomb moves. 125 Def + Drain Punch + Leftovers. Great mixed bulk."},
+  {name:"Grimmsnarl",types:["Dark","Fairy"],ability:"Prankster",item:"Leftovers",hp:95,def:65,spd:75,spa:95,spe:60,setupType:"bu",
+    fx:[{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"},{type:"raidNote",desc:"Prankster priority irrelevant in raids (no speed)"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Drain Punch",t:"Fighting",cat:"coverage_sustain"},{n:"Darkest Lariat",t:"Dark",cat:"stab"},{n:"Spirit Break",t:"Fairy",cat:"stab"},{n:"Thunder Punch",t:"Electric",cat:"coverage"},{n:"Fire Punch",t:"Fire",cat:"coverage"},{n:"Power Whip",t:"Grass",cat:"coverage"}],
+    stab:["Dark","Fairy"],note:"Dragon immune + Psychic immune = 2 full immunities. Spirit Break lowers boss Sp.Atk. Drain Punch + Leftovers. Prankster wasted in raids."},
+  {name:"Incineroar",types:["Fire","Dark"],ability:"Intimidate",item:"Leftovers",hp:95,def:90,spd:90,spa:80,spe:60,setupType:"bu",
+    fx:[{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"},{type:"raidNote",desc:"Intimidate may trigger once on entry but no re-trigger (no switching)"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Drain Punch",t:"Fighting",cat:"coverage_sustain"},{n:"Flare Blitz",t:"Fire",cat:"stab"},{n:"Darkest Lariat",t:"Dark",cat:"stab"},{n:"Earthquake",t:"Ground",cat:"coverage"},{n:"Thunder Punch",t:"Electric",cat:"coverage"}],
+    stab:["Fire","Dark"],note:"Psychic immune. Intimidate drops boss Atk once on entry. Drain Punch + Leftovers sustain. Solid balanced bulk."},
+  {name:"Blaziken",types:["Fire","Fighting"],ability:"Speed Boost",item:"Leftovers",hp:80,def:70,spd:70,spa:110,spe:80,setupType:"bu",
+    fx:[{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"},{type:"raidNote",desc:"Speed Boost irrelevant in raids (no speed mechanic)"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Drain Punch",t:"Fighting",cat:"stab_sustain"},{n:"Flare Blitz",t:"Fire",cat:"stab"},{n:"Thunder Punch",t:"Electric",cat:"coverage"},{n:"Earthquake",t:"Ground",cat:"coverage"},{n:"Stone Edge",t:"Rock",cat:"coverage"}],
+    stab:["Fire","Fighting"],note:"Strong dual STAB. Drain Punch sustain. Speed Boost wasted in raids — consider Blaze or Mega instead."},
+  {name:"Toxicroak",types:["Poison","Fighting"],ability:"Dry Skin",item:"Black Sludge",hp:83,def:65,spd:65,spa:86,spe:85,setupType:"bu",
+    fx:[{type:"typeImmune",val:"Water",desc:"Dry Skin: IMMUNE to Water moves + heals 25% from them"},{type:"passiveHeal",val:6,desc:"Black Sludge 6% HP/turn"},{type:"rainHeal",desc:"Dry Skin: heals 12.5% HP/turn in rain"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Drain Punch",t:"Fighting",cat:"stab_sustain"},{n:"Poison Jab",t:"Poison",cat:"stab"},{n:"Ice Punch",t:"Ice",cat:"coverage"},{n:"Earthquake",t:"Ground",cat:"coverage"},{n:"Sucker Punch",t:"Dark",cat:"coverage_priority"},{n:"Thunder Punch",t:"Electric",cat:"coverage"}],
+    stab:["Poison","Fighting"],note:"Dry Skin = Water IMMUNITY + heals 25% from Water hits + 12.5%/turn in rain. Perfect Water raid counter. Black Sludge passive."},
+  {name:"Scizor",types:["Bug","Steel"],ability:"Technician",item:"Leftovers",hp:70,def:100,spd:80,spa:55,spe:65,setupType:"bu",
+    fx:[{type:"techBoost",desc:"Technician: moves ≤60 BP get 50% damage boost (Bullet Punch = 60 × 1.5 × STAB)"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Roost",t:"Flying",cat:"sustain"},{n:"Bullet Punch",t:"Steel",cat:"stab_priority"},{n:"Bug Bite",t:"Bug",cat:"stab"},{n:"X-Scissor",t:"Bug",cat:"stab"},{n:"Superpower",t:"Fighting",cat:"coverage"},{n:"Knock Off",t:"Dark",cat:"coverage"}],
+    stab:["Bug","Steel"],note:"Only 1 weakness (Fire). Technician Bullet Punch = boosted STAB priority. Roost + Leftovers."},
+  {name:"Annihilape",types:["Fighting","Ghost"],ability:"Defiant",item:"Leftovers",hp:110,def:80,spd:90,spa:50,spe:90,setupType:"bu",
+    fx:[{type:"defiant",desc:"Defiant: +2 Attack when opponent lowers any stat — punishes Intimidate"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"},{type:"rageFist",desc:"Rage Fist: base power increases by 50 each time hit (50→100→150→200→250→300)"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Drain Punch",t:"Fighting",cat:"stab_sustain"},{n:"Rage Fist",t:"Ghost",cat:"stab"},{n:"Shadow Claw",t:"Ghost",cat:"stab"},{n:"Ice Punch",t:"Ice",cat:"coverage"},{n:"Earthquake",t:"Ground",cat:"coverage"},{n:"Rest",t:"Psychic",cat:"sustain"}],
+    stab:["Fighting","Ghost"],note:"Rage Fist scales +50 BP each hit taken (up to 350!) — perfect for long raids. Normal+Fighting immune. Defiant punishes stat drops."},
+  {name:"Melmetal",types:["Steel"],ability:"Iron Fist",item:"Leftovers",hp:135,def:143,spd:65,spa:80,spe:34,setupType:"bu",
+    fx:[{type:"ironFist",desc:"Iron Fist: 20% boost to all punch moves (Drain Punch, Thunder/Ice/Fire Punch)"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Drain Punch",t:"Fighting",cat:"coverage_sustain"},{n:"Double Iron Bash",t:"Steel",cat:"stab"},{n:"Thunder Punch",t:"Electric",cat:"coverage"},{n:"Ice Punch",t:"Ice",cat:"coverage"},{n:"Earthquake",t:"Ground",cat:"coverage"}],
+    stab:["Steel"],note:"Iron Fist boosts ALL punch moves 20%. 135 HP + 143 Def. Double Iron Bash = 60×2 + flinch chance + Iron Fist. Leftovers."},
+  {name:"Virizion",types:["Grass","Fighting"],ability:"Justified",item:"Leftovers",hp:91,def:72,spd:129,spa:90,spe:108,setupType:"bu",
+    fx:[{type:"justified",desc:"Justified: +1 Attack when hit by Dark moves — turns Dark-type attacks into free boosts"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Leech Seed",t:"Grass",cat:"sustain"},{n:"Drain Punch",t:"Fighting",cat:"stab_sustain"},{n:"Leaf Blade",t:"Grass",cat:"stab"},{n:"Stone Edge",t:"Rock",cat:"coverage"},{n:"Zen Headbutt",t:"Psychic",cat:"coverage"}],
+    stab:["Grass","Fighting"],note:"Justified = free +1 Atk from Dark moves. 129 Sp.Def. Leech Seed + Drain Punch + Leftovers."},
+  {name:"Pangoro",types:["Fighting","Dark"],ability:"Iron Fist",item:"Leftovers",hp:95,def:78,spd:71,spa:69,spe:58,setupType:"bu",
+    fx:[{type:"ironFist",desc:"Iron Fist: 20% boost to punch moves"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Drain Punch",t:"Fighting",cat:"stab_sustain"},{n:"Knock Off",t:"Dark",cat:"stab"},{n:"Ice Punch",t:"Ice",cat:"coverage"},{n:"Earthquake",t:"Ground",cat:"coverage"},{n:"Poison Jab",t:"Poison",cat:"coverage"},{n:"Thunder Punch",t:"Electric",cat:"coverage"}],
+    stab:["Fighting","Dark"],note:"Iron Fist boosts Drain Punch healing/damage. Scrappy hits Ghosts. Psychic immune. Leftovers."},
+  {name:"Hawlucha",types:["Fighting","Flying"],ability:"Unburden",item:"Leftovers",hp:78,def:75,spd:63,spa:74,spe:118,setupType:"bu",
+    fx:[{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"},{type:"raidNote",desc:"Unburden speed doubling irrelevant in raids (no speed mechanic)"}],
+    moves:[{n:"Bulk Up",t:"Fighting",cat:"setup"},{n:"Drain Punch",t:"Fighting",cat:"stab_sustain"},{n:"Roost",t:"Flying",cat:"sustain"},{n:"Acrobatics",t:"Flying",cat:"stab"},{n:"Thunder Punch",t:"Electric",cat:"coverage"},{n:"Stone Edge",t:"Rock",cat:"coverage"},{n:"Poison Jab",t:"Poison",cat:"coverage"}],
+    stab:["Fighting","Flying"],note:"Dual STAB Fighting/Flying is great coverage. Roost + Drain Punch + Leftovers sustain. Unburden wasted in raids."},
+  // SPECIALTY
+  {name:"Ferrothorn",types:["Grass","Steel"],ability:"Iron Barbs",item:"Leftovers",hp:74,def:131,spd:116,spa:54,spe:20,setupType:"none",
+    fx:[{type:"contactDmg",desc:"Iron Barbs: deals 12.5% damage to boss on every contact move used"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Leech Seed",t:"Grass",cat:"sustain"},{n:"Power Whip",t:"Grass",cat:"stab"},{n:"Gyro Ball",t:"Steel",cat:"stab"},{n:"Knock Off",t:"Dark",cat:"coverage"},{n:"Protect",t:"Normal",cat:"utility"},{n:"Thunder Wave",t:"Electric",cat:"utility"}],
+    stab:["Grass","Steel"],note:"Iron Barbs = 12.5% damage to boss every time it uses a contact move. Leech Seed + Leftovers. 10 resistances. Protect scouts."},
+  {name:"Toxapex",types:["Poison","Water"],ability:"Regenerator",item:"Black Sludge",hp:50,def:152,spd:142,spa:53,spe:35,setupType:"none",
+    fx:[{type:"passiveHeal",val:6,desc:"Black Sludge 6% HP/turn"},{type:"raidNote",desc:"Regenerator useless in raids (no switching)"}],
+    moves:[{n:"Recover",t:"Normal",cat:"sustain"},{n:"Scald",t:"Water",cat:"stab"},{n:"Sludge Bomb",t:"Poison",cat:"stab"},{n:"Haze",t:"Ice",cat:"utility"},{n:"Toxic",t:"Poison",cat:"utility"},{n:"Knock Off",t:"Dark",cat:"coverage"}],
+    stab:["Poison","Water"],note:"152 Def / 142 Sp.Def — insane wall. Black Sludge + Recover. Haze removes boss buffs. Regenerator wasted in raids."},
+  {name:"Volcarona",types:["Bug","Fire"],ability:"Flame Body",item:"Leftovers",hp:85,def:65,spd:105,spa:135,spe:100,setupType:"qd",
+    fx:[{type:"contactBurn",desc:"Flame Body: 30% chance to burn boss on contact"},{type:"passiveHeal",val:6,desc:"Leftovers 6% HP/turn"}],
+    moves:[{n:"Quiver Dance",t:"Bug",cat:"setup"},{n:"Giga Drain",t:"Grass",cat:"coverage_sustain"},{n:"Roost",t:"Flying",cat:"sustain"},{n:"Flamethrower",t:"Fire",cat:"stab"},{n:"Bug Buzz",t:"Bug",cat:"stab"},{n:"Psychic",t:"Psychic",cat:"coverage"},{n:"Hurricane",t:"Flying",cat:"coverage"}],
+    stab:["Bug","Fire"],note:"Quiver Dance = Sp.Atk + Sp.Def + Speed in one move. Flame Body burns physical attackers on contact. 135 Sp.Atk."},
+];
+
+// ─── MOVE RECOMMENDATION ───
+function recommendMoves(c, bossTypes, teraType) {
+  const effTypes = teraType ? [teraType] : bossTypes;
+  const picked = [], used = new Set();
+  const pick = m => { if (!used.has(m.n)) { picked.push(m); used.add(m.n); } };
+  const setup = c.moves.find(m => m.cat === "setup");
+  if (setup) pick(setup);
+  const leech = c.moves.find(m => m.n === "Leech Seed");
+  const reliable = c.moves.find(m => ["Recover","Soft-Boiled","Slack Off","Moonlight","Synthesis","Roost","Wish"].includes(m.n));
+  const drains = c.moves.filter(m => m.cat.includes("sustain") && m.cat.includes("stab") && !used.has(m.n));
+  const rest = c.moves.find(m => m.n === "Rest");
+  const sleepTalk = c.moves.find(m => m.n === "Sleep Talk");
+  if (leech) pick(leech);
+  if (reliable && !used.has(reliable.n)) pick(reliable);
+  else if (drains.length > 0 && picked.length < 3) {
+    const sorted = [...drains].sort((a,b) => getEff(b.t, effTypes) - getEff(a.t, effTypes));
+    pick(sorted[0]);
+  }
+  if (picked.length < 2 && rest && !used.has(rest.n)) { pick(rest); if (sleepTalk && !used.has(sleepTalk.n)) pick(sleepTalk); }
+  const offensive = c.moves.filter(m => !used.has(m.n) && (m.cat.includes("stab") || m.cat.includes("coverage")))
+    .map(m => { let s = 0; const eff = getEff(m.t, effTypes); const isSTAB = c.stab.includes(m.t); if (isSTAB && eff >= 2) s += 100; else if (eff >= 2) s += 50; else if (isSTAB) s += 30; s += eff * 10; if (m.cat.includes("sustain")) s += 15; if (m.cat.includes("priority")) s += 8; return { ...m, score: s }; })
+    .sort((a, b) => b.score - a.score);
+  for (const m of offensive) { if (picked.length >= 4) break; pick(m); }
+  while (picked.length < 4) picked.push({ n: "Flex", t: null, cat: "flex" });
+  return picked.slice(0, 4);
+}
+
+// ─── SCORING ───
+function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode) {
+  const effTypes = teraType ? [teraType] : bossTypes;
+  let bestStabSE = 0, bestSE = 0, bestSTAB = 0;
+  for (const st of c.stab) { const e = getEff(st, effTypes); if (e >= 2) bestStabSE = Math.max(bestStabSE, e); bestSTAB = Math.max(bestSTAB, e); }
+  for (const cm of c.moves.filter(m => m.cat.includes("coverage") || m.cat.includes("stab"))) { const e = getEff(cm.t, effTypes); if (e >= 2) bestSE = Math.max(bestSE, e); }
+  let offScore = bestStabSE >= 4 ? 12 : bestStabSE >= 2 ? 10 : bestSE >= 4 ? 8 : bestSE >= 2 ? 6 : bestSTAB >= 1 ? 4 : bestSTAB >= 0.5 ? 2 : 0;
+  const rawDmgBonus = c.setupType !== "bu" ? Math.min(3, Math.round((c.spa - 80) / 25)) : 0;
+
+  // ABILITY: offense bonuses
+  let abilityOffBonus = 0;
+  if (c.fx.some(f => f.type === "freeLifeOrb")) abilityOffBonus += 2; // 30% damage boost free
+  if (c.fx.some(f => f.type === "contrary")) abilityOffBonus += 2; // Leaf Storm stacks
+  if (c.fx.some(f => f.type === "techBoost")) abilityOffBonus += 1;
+  if (c.fx.some(f => f.type === "ironFist")) abilityOffBonus += 1;
+  if (c.fx.some(f => f.type === "gutsBurn")) abilityOffBonus += 2; // 50% Atk boost
+
+  const bossAtkTypes = [...new Set([...bossTypes, ...(teraType ? [teraType] : [])])];
+  const defM = getDefMult(bossAtkTypes, c.types);
+  let defScore = defM === 0 ? 10 : defM <= 0.25 ? 9 : defM <= 0.5 ? 7 : defM <= 1 ? 5 : defM <= 2 ? 3 : 1;
+
+  // ABILITY: defense bonuses
+  let abilityDefBonus = 0;
+  for (const f of c.fx) {
+    if (f.type === "typeImmune" && bossAtkTypes.includes(f.val)) abilityDefBonus += 4; // ability immunity vs boss type
+    if (f.type === "intimidate" && bossStyle !== "special") abilityDefBonus += 1; // only triggers once on entry in raids
+    if (f.type === "dmgHalved") abilityDefBonus += 2;
+    if (f.type === "reflectDrops") abilityDefBonus += 1;
+    if (f.type === "blockBombs") abilityDefBonus += 1;
+    if (f.type === "statusBlock" || f.type === "statusImmune") abilityDefBonus += 1;
+    if (f.type === "magicBounce") abilityDefBonus += 1;
+    if (f.type === "contactDmg") abilityDefBonus += (bossStyle === "physical" ? 2 : 1);
+    if (f.type === "contactBurn" && bossStyle === "physical") abilityDefBonus += 2;
+    if (f.type === "doubleSecondary") abilityDefBonus += 1; // flinch = pseudo-defense
+  }
+  // Justified/Defiant bonuses vs Dark bosses
+  if (c.fx.some(f => f.type === "justified") && bossAtkTypes.includes("Dark")) abilityOffBonus += 2;
+  if (c.fx.some(f => f.type === "defiant")) abilityOffBonus += 1;
+
+  let setupScore = 0;
+  if (c.setupType === "qd") setupScore = 7;
+  else if (c.setupType === "cm") setupScore = bossStyle === "special" ? 7 : bossStyle === "physical" ? 3 : 5;
+  else if (c.setupType === "bu") setupScore = bossStyle === "physical" ? 7 : bossStyle === "special" ? 3 : 5;
+  // Note: Prankster/Speed Boost/Unburden don't help in raids (no speed mechanic, no switching)
+
+  // SUSTAIN — includes ability-based healing
+  const hasLeech = c.moves.some(m => m.n === "Leech Seed");
+  const hasReliable = c.moves.some(m => ["Recover","Soft-Boiled","Slack Off","Moonlight","Synthesis","Roost","Wish"].includes(m.n));
+  const hasDrain = c.moves.some(m => m.cat.includes("sustain") && m.cat.includes("stab"));
+  const hasRest = c.moves.some(m => m.n === "Rest");
+  let sustainScore = 0;
+  if (hasLeech && hasReliable) sustainScore = 5;
+  else if (hasLeech && hasDrain) sustainScore = 5;
+  else if (hasLeech) sustainScore = 4;
+  else if (hasReliable) sustainScore = 4;
+  else if (hasDrain) sustainScore = 3;
+  else if (hasRest) sustainScore = 2;
+
+  // Ability passive healing bonus
+  let abilityHealBonus = 0;
+  const passiveHealFx = c.fx.filter(f => f.type === "passiveHeal");
+  for (const ph of passiveHealFx) {
+    if (ph.val >= 12) abilityHealBonus += 3; // Poison Heal
+    else if (ph.val >= 6) abilityHealBonus += 1; // Leftovers/Black Sludge
+  }
+  // Regenerator doesn't help in raids (no switching)
+  if (c.fx.some(f => f.type === "rainHeal") && bossAtkTypes.includes("Water")) abilityHealBonus += 2;
+  // Rage Fist scaling = pseudo-offense bonus in long fights
+  if (c.fx.some(f => f.type === "rageFist") && raidMode === "group") abilityOffBonus += 3;
+
+  let bulkProduct;
+  if (bossStyle === "special") bulkProduct = c.hp * c.spd * Math.max(c.spd, c.def);
+  else if (bossStyle === "physical") bulkProduct = c.hp * c.def * Math.max(c.def, c.spd);
+  else bulkProduct = c.hp * c.def * c.spd;
+  const bulkScore = Math.min(5, Math.round(bulkProduct / 400000 * 5));
+
+  let immunityBonus = 0;
+  for (const bt of bossAtkTypes) { if (getEff(bt, c.types) === 0) immunityBonus += 3; }
+
+  let wOff, wDef, wSetup, wSustain, wBulk;
+  if (raidMode === "solo") { wOff = 4.0; wDef = 1.5; wSetup = 1.5; wSustain = 0.8; wBulk = 0.8; }
+  else { wOff = 2.0; wDef = 2.0; wSetup = 1.5; wSustain = 2.0; wBulk = 1.5; }
+
+  const total = ((offScore + abilityOffBonus) * wOff) + (rawDmgBonus * (raidMode === "solo" ? 2 : 0.5)) +
+    ((defScore + abilityDefBonus) * wDef) + (setupScore * wSetup) +
+    ((sustainScore + abilityHealBonus) * wSustain) + (bulkScore * wBulk) + immunityBonus;
+
+  return { total: Math.round(total * 10) / 10, offense: offScore, abilityOff: abilityOffBonus, defense: defScore, abilityDef: abilityDefBonus, setup: setupScore, sustain: sustainScore, abilityHeal: abilityHealBonus, bulk: bulkScore, immunity: immunityBonus, bestOffMult: Math.max(bestStabSE, bestSE, bestSTAB), defMult: defM, hasStabSE: bestStabSE >= 2, rawDmgBonus };
+}
+
+// ─── UI ───
+const TypeBadge = ({ type, small, onClick, selected }) => (
+  <span onClick={onClick} style={{ display:"inline-block", padding: small ? "1px 6px" : "4px 10px", borderRadius:"4px", background: TC[type] || "#888", color: ["Electric","Ground","Ice","Steel","Normal"].includes(type) ? "#222" : "#fff", fontSize: small ? "9px" : "11px", fontWeight:700, letterSpacing:"0.6px", textTransform:"uppercase", cursor: onClick ? "pointer" : "default", border: selected ? "2px solid #fff" : "2px solid transparent", transition:"all 0.15s" }}>{type}</span>
+);
+const MoveSlot = ({ move, index, counterStab, effTypes }) => {
+  const isFlex = move.cat === "flex"; const isSetup = move.cat === "setup"; const isSus = move.cat === "sustain" || move.n === "Leech Seed";
+  const isDrain = move.cat?.includes("sustain") && move.cat?.includes("stab"); const isPri = move.cat?.includes("priority");
+  const isSTAB = move.t && counterStab?.includes(move.t); const eff = move.t && effTypes ? getEff(move.t, effTypes) : 1; const isSE = eff >= 2;
+  let tag = null, tc = "#555";
+  if (isFlex) { tag = "ANY"; } else if (isSetup) { tag = "SETUP"; tc = "#F95587"; } else if (move.n === "Leech Seed") { tag = "SUSTAIN"; tc = "#56ab2f"; }
+  else if (isSus) { tag = "HEAL"; tc = "#7AC74C"; } else if (isDrain && isSE) { tag = "DRAIN+SE"; tc = "#ffd700"; } else if (isDrain) { tag = "DRAIN"; tc = "#7AC74C"; }
+  else if (isSTAB && isSE) { tag = "STAB+SE"; tc = "#ffd700"; } else if (isSE) { tag = "SE"; tc = "#ff8844"; } else if (isSTAB) { tag = "STAB"; tc = "#6390F0"; }
+  else if (isPri) { tag = "PRIORITY"; tc = "#F7D02C"; }
+  const bc = (tag === "STAB+SE" || tag === "DRAIN+SE") ? "rgba(255,215,0,0.5)" : isSetup ? "rgba(249,85,135,0.4)" : (isSus||isDrain||move.n==="Leech Seed") ? "rgba(122,199,76,0.4)" : isFlex ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.08)";
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:"6px", padding:"6px 10px", borderRadius:"6px", background: isFlex ? "rgba(255,255,255,0.01)" : "rgba(255,255,255,0.03)", border:`1px solid ${bc}` }}>
+      <span style={{ fontFamily:"monospace", fontSize:"10px", fontWeight:700, color:"#5a5550", minWidth:"12px" }}>{index+1}</span>
+      {!isFlex && move.t && <span style={{ display:"inline-block", padding:"1px 5px", borderRadius:"3px", background:TC[move.t]||"#555", color:["Electric","Ground","Ice","Steel","Normal"].includes(move.t)?"#222":"#fff", fontSize:"7px", fontWeight:800, letterSpacing:"0.5px", textTransform:"uppercase", minWidth:"32px", textAlign:"center" }}>{move.t}</span>}
+      <span style={{ flex:1, fontSize:"11px", fontWeight:isFlex?400:600, color:isFlex?"#5a5550":"#e0dcd6", fontStyle:isFlex?"italic":"normal" }}>{isFlex?"Any / Flex":move.n}</span>
+      {tag && <span style={{ fontSize:"7px", fontWeight:800, letterSpacing:"0.6px", color:tc, textTransform:"uppercase", whiteSpace:"nowrap" }}>{tag}</span>}
+    </div>
+  );
+};
+const ScoreBar = ({ label, value, max, color, bonus }) => (
+  <div style={{ display:"flex", alignItems:"center", gap:"6px", marginBottom:"3px" }}>
+    <span style={{ fontSize:"9px", color:"#8a8580", width:"52px", textAlign:"right", fontWeight:600 }}>{label}</span>
+    <div style={{ flex:1, height:"5px", background:"rgba(255,255,255,0.06)", borderRadius:"3px", overflow:"hidden" }}>
+      <div style={{ width:`${Math.min(100,(value/max)*100)}%`, height:"100%", background:color, borderRadius:"3px", transition:"width 0.4s" }}/>
+    </div>
+    <span style={{ fontSize:"9px", color:"#b0a8a0", width:"20px", fontWeight:700 }}>{value}</span>
+    {bonus > 0 && <span style={{ fontSize:"8px", color:"#ffd700", fontWeight:700 }}>+{bonus}</span>}
+  </div>
+);
+const EffLabel = ({ mult, isStabSE }) => {
+  if (isStabSE && mult >= 4) return <span style={{color:"#ffd700",fontWeight:900,fontSize:"10px"}}>4× STAB SE ★</span>;
+  if (isStabSE) return <span style={{color:"#ffd700",fontWeight:800,fontSize:"10px"}}>2× STAB SE ★</span>;
+  if (mult >= 4) return <span style={{color:"#ff4444",fontWeight:800,fontSize:"10px"}}>4× SE</span>;
+  if (mult >= 2) return <span style={{color:"#ff8844",fontWeight:700,fontSize:"10px"}}>2× SE</span>;
+  if (mult >= 1) return <span style={{color:"#aaa",fontWeight:600,fontSize:"10px"}}>1×</span>;
+  if (mult >= 0.5) return <span style={{color:"#66bb6a",fontWeight:600,fontSize:"10px"}}>Resist</span>;
+  if (mult >= 0.25) return <span style={{color:"#4caf50",fontWeight:700,fontSize:"10px"}}>2× Resist</span>;
+  return <span style={{color:"#00e5ff",fontWeight:800,fontSize:"10px"}}>IMMUNE</span>;
+};
+
+function App() {
+  const [search, setSearch] = useState(""); const [selectedBoss, setSelectedBoss] = useState(null); const [teraType, setTeraType] = useState("");
+  const [showDD, setShowDD] = useState(false); const [manualTypes, setManualTypes] = useState([]); const [useManual, setUseManual] = useState(false);
+  const [bossStyle, setBossStyle] = useState("special"); const [raidMode, setRaidMode] = useState("solo");
+  const names = useMemo(() => Object.keys(pokemonDB).sort(), []);
+  const filtered = useMemo(() => !search ? [] : names.filter(n => n.toLowerCase().includes(search.toLowerCase())).slice(0, 15), [search, names]);
+  const bossTypes = useManual ? manualTypes : (selectedBoss ? pokemonDB[selectedBoss] : null);
+  const effTypes = teraType ? [teraType] : bossTypes;
+  const results = useMemo(() => {
+    if (!bossTypes || bossTypes.length === 0) return [];
+    return CP.map(c => ({ ...c, score: scoreCounter(c, bossTypes, teraType || null, bossStyle, raidMode), recMoves: recommendMoves(c, bossTypes, teraType || null) }))
+      .sort((a, b) => b.score.total - a.score.total).slice(0, 50);
+  }, [bossTypes, teraType, bossStyle, raidMode]);
+  const selectBoss = (name) => { setSelectedBoss(name); setSearch(name); setShowDD(false); setTeraType(""); setUseManual(false); };
+  const toggleManualType = (t) => setManualTypes(p => p.includes(t) ? p.filter(x => x !== t) : p.length >= 2 ? [p[1], t] : [...p, t]);
+
+  return (
+    <div style={{ fontFamily:"'Courier New','Consolas',monospace", background:"#12100e", color:"#e0dcd6", minHeight:"100vh", padding:"16px" }}>
+      <div style={{ maxWidth:"820px", margin:"0 auto" }}>
+        <div style={{ textAlign:"center", marginBottom:"20px", padding:"16px", background:"linear-gradient(180deg, rgba(86,171,47,0.08) 0%, transparent 100%)", borderBottom:"2px solid rgba(86,171,47,0.2)" }}>
+          <div style={{ fontSize:"9px", letterSpacing:"3px", color:"#56ab2f", marginBottom:"6px", fontWeight:700 }}>COBBLEVERSE RAID DENS</div>
+          <h1 style={{ fontSize:"20px", fontWeight:800, margin:"0 0 4px", color:"#e8e4de" }}>⚔ RAID COUNTER ANALYZER</h1>
+          <p style={{ fontSize:"10px", color:"#7a756e", margin:0 }}>STAB SE priority · Ability & Item synergies scored · Solo/Group · Physical/Special</p>
+        </div>
+
+        <div style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:"10px", padding:"16px", marginBottom:"20px" }}>
+          <div style={{ display:"flex", gap:"6px", marginBottom:"12px" }}>
+            <button onClick={() => { setUseManual(false); setManualTypes([]); }} style={{ padding:"5px 12px", borderRadius:"6px", border: !useManual ? "1px solid rgba(86,171,47,0.5)" : "1px solid rgba(255,255,255,0.08)", background: !useManual ? "rgba(86,171,47,0.15)" : "transparent", color: !useManual ? "#56ab2f" : "#7a756e", fontSize:"10px", fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Search</button>
+            <button onClick={() => { setUseManual(true); setSelectedBoss(null); setSearch(""); }} style={{ padding:"5px 12px", borderRadius:"6px", border: useManual ? "1px solid rgba(86,171,47,0.5)" : "1px solid rgba(255,255,255,0.08)", background: useManual ? "rgba(86,171,47,0.15)" : "transparent", color: useManual ? "#56ab2f" : "#7a756e", fontSize:"10px", fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Manual Type</button>
+          </div>
+          {!useManual ? (
+            <div style={{ display:"flex", gap:"10px", flexWrap:"wrap", alignItems:"flex-start" }}>
+              <div style={{ flex:"1 1 260px", position:"relative" }}>
+                <label style={{ fontSize:"9px", letterSpacing:"1.5px", color:"#56ab2f", fontWeight:700, display:"block", marginBottom:"4px" }}>RAID BOSS</label>
+                <input type="text" value={search} placeholder="Pokémon name..." onChange={e => { setSearch(e.target.value); setSelectedBoss(null); setShowDD(true); }} onFocus={() => setShowDD(true)}
+                  style={{ width:"100%", padding:"8px 12px", borderRadius:"6px", border:"1px solid rgba(86,171,47,0.3)", background:"rgba(0,0,0,0.3)", color:"#e0dcd6", fontSize:"13px", fontFamily:"inherit", outline:"none", boxSizing:"border-box" }} />
+                {showDD && filtered.length > 0 && !selectedBoss && (
+                  <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#1e1c18", border:"1px solid rgba(86,171,47,0.3)", borderRadius:"0 0 6px 6px", maxHeight:"260px", overflowY:"auto", zIndex:100 }}>
+                    {filtered.map(name => (
+                      <div key={name} onClick={() => selectBoss(name)} style={{ padding:"6px 12px", cursor:"pointer", display:"flex", alignItems:"center", gap:"6px", borderBottom:"1px solid rgba(255,255,255,0.04)", fontSize:"12px" }}
+                        onMouseEnter={e => e.currentTarget.style.background="rgba(86,171,47,0.1)"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                        <span style={{ flex:1 }}>{name}</span>{pokemonDB[name].map(t => <TypeBadge key={t} type={t} small />)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{ flex:"0 0 130px" }}>
+                <label style={{ fontSize:"9px", letterSpacing:"1.5px", color:"#56ab2f", fontWeight:700, display:"block", marginBottom:"4px" }}>TERA TYPE</label>
+                <select value={teraType} onChange={e => setTeraType(e.target.value)} style={{ width:"100%", padding:"8px 12px", borderRadius:"6px", border:"1px solid rgba(86,171,47,0.3)", background:"rgba(0,0,0,0.3)", color:"#e0dcd6", fontSize:"12px", fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}>
+                  <option value="">None</option>{TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label style={{ fontSize:"9px", letterSpacing:"1.5px", color:"#56ab2f", fontWeight:700, display:"block", marginBottom:"6px" }}>BOSS TYPES (1-2)</label>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:"5px", marginBottom:"10px" }}>{TYPES.map(t => <TypeBadge key={t} type={t} onClick={() => toggleManualType(t)} selected={manualTypes.includes(t)} />)}</div>
+              {manualTypes.length > 0 && <select value={teraType} onChange={e => setTeraType(e.target.value)} style={{ padding:"6px 10px", borderRadius:"6px", border:"1px solid rgba(86,171,47,0.3)", background:"rgba(0,0,0,0.3)", color:"#e0dcd6", fontSize:"11px", fontFamily:"inherit", outline:"none" }}>
+                <option value="">Tera: None</option>{TYPES.map(t => <option key={t} value={t}>Tera: {t}</option>)}
+              </select>}
+            </div>
+          )}
+          <div style={{ display:"flex", gap:"20px", marginTop:"12px", flexWrap:"wrap" }}>
+            <div>
+              <label style={{ fontSize:"9px", letterSpacing:"1.5px", color:"#56ab2f", fontWeight:700, display:"block", marginBottom:"6px" }}>BOSS ATTACKS</label>
+              <div style={{ display:"flex", gap:"5px" }}>
+                {[["physical","⚔ Phys","#C22E28"],["special","✦ Spec","#6390F0"],["mixed","◆ Mix","#A8A77A"]].map(([s,l,col]) => (
+                  <button key={s} onClick={() => setBossStyle(s)} style={{ padding:"5px 10px", borderRadius:"6px", fontFamily:"inherit", cursor:"pointer", border: bossStyle===s ? `1px solid ${col}` : "1px solid rgba(255,255,255,0.08)", background: bossStyle===s ? `${col}22` : "transparent", color: bossStyle===s ? col : "#7a756e", fontSize:"9px", fontWeight:700 }}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize:"9px", letterSpacing:"1.5px", color:"#56ab2f", fontWeight:700, display:"block", marginBottom:"6px" }}>RAID MODE</label>
+              <div style={{ display:"flex", gap:"5px" }}>
+                {[["solo","Solo","#ffd700"],["group","Group","#56ab2f"]].map(([m,l,col]) => (
+                  <button key={m} onClick={() => setRaidMode(m)} style={{ padding:"5px 10px", borderRadius:"6px", fontFamily:"inherit", cursor:"pointer", border: raidMode===m ? `1px solid ${col}` : "1px solid rgba(255,255,255,0.08)", background: raidMode===m ? `${col}22` : "transparent", color: raidMode===m ? col : "#7a756e", fontSize:"9px", fontWeight:700 }}>{l}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+          {bossTypes && bossTypes.length > 0 && (
+            <div style={{ marginTop:"12px", padding:"10px 14px", background:"rgba(0,0,0,0.2)", borderRadius:"6px", display:"flex", alignItems:"center", gap:"8px", flexWrap:"wrap" }}>
+              <span style={{ fontWeight:700, fontSize:"14px" }}>{selectedBoss || "Custom"}</span>
+              <div style={{ display:"flex", gap:"3px" }}>{bossTypes.map(t => <TypeBadge key={t} type={t} />)}</div>
+              {teraType && <><span style={{ fontSize:"9px", color:"#7a756e" }}>TERA→</span><TypeBadge type={teraType} /><span style={{ fontSize:"8px", color:"#5a5550" }}>(def as {teraType}, STAB {[...new Set([...bossTypes,teraType])].join("+")})</span></>}
+            </div>
+          )}
+        </div>
+
+        {results.length > 0 && (
+          <div>
+            <div style={{ fontSize:"9px", letterSpacing:"2px", color:"#56ab2f", fontWeight:700, marginBottom:"10px", paddingBottom:"6px", borderBottom:"1px solid rgba(86,171,47,0.15)" }}>
+              TOP COUNTERS — {raidMode === "solo" ? "SOLO (DAMAGE)" : "GROUP (SUSTAIN)"} — {bossStyle === "physical" ? "VS PHYSICAL" : bossStyle === "special" ? "VS SPECIAL" : "VS MIXED"}
+            </div>
+            {results.map((c, i) => (
+              <div key={c.name} style={{ background: i === 0 ? "linear-gradient(135deg, rgba(86,171,47,0.08), rgba(255,215,0,0.04))" : "rgba(255,255,255,0.015)", border: i === 0 ? "1px solid rgba(86,171,47,0.3)" : "1px solid rgba(255,255,255,0.04)", borderRadius:"10px", padding:"14px", marginBottom:"10px" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:"6px", marginBottom:"10px", flexWrap:"wrap" }}>
+                  <span style={{ fontFamily:"monospace", fontSize:"16px", fontWeight:900, color: i === 0 ? "#ffd700" : i < 3 ? "#56ab2f" : "#5a5550", minWidth:"24px" }}>#{i+1}</span>
+                  <span style={{ fontWeight:800, fontSize:"14px", color:"#e8e4de" }}>{c.name}</span>
+                  <div style={{ display:"flex", gap:"2px" }}>{c.types.map(t => <TypeBadge key={t} type={t} small />)}</div>
+                  <span style={{ fontSize:"8px", padding:"2px 5px", borderRadius:"3px", background:c.setupType==="cm"?"rgba(99,144,240,0.2)":c.setupType==="bu"?"rgba(194,46,40,0.2)":c.setupType==="qd"?"rgba(249,85,135,0.2)":"rgba(255,255,255,0.05)", color:c.setupType==="cm"?"#6390F0":c.setupType==="bu"?"#C22E28":c.setupType==="qd"?"#F95587":"#777", fontWeight:700 }}>
+                    {c.setupType==="cm"?"CM":c.setupType==="bu"?"BU":c.setupType==="qd"?"QD":"WALL"}
+                  </span>
+                  {c.score.hasStabSE && <span style={{ fontSize:"7px", padding:"2px 5px", borderRadius:"3px", background:"rgba(255,215,0,0.15)", color:"#ffd700", fontWeight:800 }}>★ STAB SE</span>}
+                  <span style={{ marginLeft:"auto", fontSize:"13px", fontWeight:900, color: c.score.total >= 50 ? "#ffd700" : c.score.total >= 38 ? "#56ab2f" : "#b0a8a0" }}>{c.score.total}</span>
+                </div>
+
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px", marginBottom:"8px" }}>
+                  <div>
+                    <div style={{ fontSize:"8px", letterSpacing:"1px", color:"#56ab2f", fontWeight:700, marginBottom:"4px" }}>SCORES</div>
+                    <ScoreBar label="Offense" value={c.score.offense} max={12} color={c.score.hasStabSE?"#ffd700":"#ff8844"} bonus={c.score.abilityOff} />
+                    <ScoreBar label="Defense" value={c.score.defense} max={10} color="#6390F0" bonus={c.score.abilityDef} />
+                    <ScoreBar label="Setup" value={c.score.setup} max={9} color="#F95587" />
+                    <ScoreBar label="Sustain" value={c.score.sustain} max={5} color="#7AC74C" bonus={c.score.abilityHeal} />
+                    <ScoreBar label="Bulk" value={c.score.bulk} max={5} color="#B7B7CE" />
+                    {c.score.immunity > 0 && <ScoreBar label="Immune!" value={c.score.immunity} max={6} color="#00e5ff" />}
+                  </div>
+                  <div>
+                    <div style={{ fontSize:"8px", letterSpacing:"1px", color:"#56ab2f", fontWeight:700, marginBottom:"4px" }}>MOVESET</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:"2px" }}>
+                      {c.recMoves.map((m, j) => <MoveSlot key={j} move={m} index={j} counterStab={c.stab} effTypes={effTypes} />)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ability/Item bar */}
+                <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"6px" }}>
+                  <span style={{ fontSize:"9px", padding:"3px 8px", borderRadius:"4px", background:"rgba(249,85,135,0.1)", border:"1px solid rgba(249,85,135,0.2)", color:"#F95587", fontWeight:700 }}>{c.ability}</span>
+                  {c.item && <span style={{ fontSize:"9px", padding:"3px 8px", borderRadius:"4px", background:"rgba(255,215,0,0.1)", border:"1px solid rgba(255,215,0,0.2)", color:"#ffd700", fontWeight:700 }}>{c.item}</span>}
+                </div>
+
+                {/* Ability effects */}
+                <div style={{ display:"flex", gap:"4px", flexWrap:"wrap", marginBottom:"6px" }}>
+                  {c.fx.map((f, fi) => (
+                    <span key={fi} style={{ fontSize:"8px", padding:"2px 6px", borderRadius:"3px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)", color:"#b0a8a0" }}>{f.desc}</span>
+                  ))}
+                </div>
+
+                <div style={{ display:"flex", gap:"12px", flexWrap:"wrap", fontSize:"10px", marginBottom:"4px", padding:"6px 8px", background:"rgba(0,0,0,0.15)", borderRadius:"4px" }}>
+                  <div><span style={{ color:"#7a756e" }}>You→Boss: </span><EffLabel mult={c.score.bestOffMult} isStabSE={c.score.hasStabSE} /></div>
+                  <div><span style={{ color:"#7a756e" }}>Boss→You: </span><EffLabel mult={c.score.defMult} /></div>
+                </div>
+                <div style={{ fontSize:"10px", color:"#9a9490", lineHeight:1.4 }}>{c.note}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {(!bossTypes || bossTypes.length === 0) && (
+          <div style={{ textAlign:"center", padding:"40px 20px", color:"#5a5550", fontSize:"12px" }}>
+            <div style={{ fontSize:"28px", marginBottom:"10px", opacity:0.4 }}>⚔</div>
+            Search for a raid boss or select types manually.
+          </div>
+        )}
+
+        <div style={{ marginTop:"28px", textAlign:"center", fontSize:"8px", color:"#3a3530", paddingTop:"12px", borderTop:"1px solid rgba(255,255,255,0.04)", lineHeight:1.6 }}>
+          Ability/Item bonuses shown as gold <span style={{color:"#ffd700"}}>+N</span> next to score bars · Poison Heal+Toxic Orb = +3 sustain · Magic Guard+Life Orb = +2 offense · Flash Fire/Dry Skin/Levitate = +4 def if boss has that type
+          <br/>Solo: Offense ×4 · Group: Sustain ×2 · STAB SE = 10-12 pts · Tera: defends as Tera, attacks with all STAB
+        </div>
+      </div>
+    </div>
+  );
+}
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(React.createElement(App));
+  </script>
+</body>
+</html>
