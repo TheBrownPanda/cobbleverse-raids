@@ -177,6 +177,30 @@ function buildCounter(pid, pokemon, movesDB, learnset, abilitiesDB, tagsDB) {
   // Get STAB types
   const stab = p.types;
 
+  // Item assignment — Megas/Primals/Gmax have item slot locked
+  const isMega = pid.includes('mega');
+  const isPrimal = pid.includes('primal');
+  const isGmax = pid.includes('gmax');
+  const itemLocked = isMega || isPrimal || isGmax;
+  let item = "None";
+  let itemHeal = 0; // % HP per turn
+  let itemNote = "";
+  if (!itemLocked) {
+    if (abilityInfo.passiveHeal >= 12) {
+      // Poison Heal — wants Toxic Orb to activate
+      item = "Toxic Orb"; itemNote = "Activates Poison Heal";
+    } else if (abilityInfo.noChipDmg) {
+      // Magic Guard — free Life Orb with no recoil
+      item = "Life Orb"; itemNote = "No recoil with Magic Guard";
+    } else if (p.types.includes("Poison")) {
+      item = "Black Sludge"; itemHeal = 6.25; itemNote = "6% HP/turn";
+    } else {
+      item = "Leftovers"; itemHeal = 6.25; itemNote = "6% HP/turn";
+    }
+  } else {
+    itemNote = isMega ? "Mega Stone (no item)" : isPrimal ? "Primal Orb (no item)" : "G-Max (no item)";
+  }
+
   return {
     id: pid,
     name: p.name,
@@ -188,6 +212,7 @@ function buildCounter(pid, pokemon, movesDB, learnset, abilitiesDB, tagsDB) {
     setupType,
     setupOptions,
     isPhysical,
+    item, itemHeal, itemNote, itemLocked,
     hasReliableRecovery,
     hasRest,
     hasDrain,
@@ -284,9 +309,12 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
   if (c.abilityInfo.statusImmune) abilityDefBonus += 1;
   if (c.abilityInfo.typeImmune && bossAtkTypes.includes(c.abilityInfo.typeImmune)) abilityDefBonus += 4;
   if (c.abilityInfo.passiveHeal) {
-    if (c.abilityInfo.passiveHeal >= 12) abilityHealBonus += 3;
+    if (c.abilityInfo.passiveHeal >= 12) abilityHealBonus += 3; // Poison Heal
     else if (c.abilityInfo.passiveHeal >= 6) abilityHealBonus += 1;
   }
+  // Item passive healing (Leftovers/Black Sludge = 6.25% per turn)
+  // Megas/Primals/Gmax have no item so no healing
+  if (c.itemHeal > 0) abilityHealBonus += 1;
 
   // SETUP
   let setupScore = 0;
@@ -878,6 +906,7 @@ function App() {
                     <div style={{ display:"flex", gap:"3px" }}>{c.types.map(t => <TypeBadge key={t} type={t} small />)}</div>
                     <SetupBadge setupOptions={c.setupOptions} />
                     <span style={{ fontSize:"9px", color:"#4a4660", fontStyle:"italic" }}>{c.ability}</span>
+                    <span style={{ fontSize:"9px", color: c.itemLocked ? "#ef4444" : "#4a4660" }}>{c.itemLocked ? "⚠ no item" : c.item}</span>
                     {c.score.hasStabSE && <span style={{ fontSize:"8px", padding:"2px 6px", borderRadius:"4px", background:"rgba(251,191,36,0.1)", color:"#fbbf24", fontWeight:800 }}>★ STAB SE</span>}
                     {c.score.fullImmune && <span style={{ fontSize:"8px", padding:"2px 6px", borderRadius:"4px", background:"rgba(34,211,238,0.1)", color:"#22d3ee", fontWeight:800 }}>🛡 IMMUNE</span>}
                     <span style={{ marginLeft:"auto", fontWeight:900, fontSize:"18px", color: i === 0 ? "#fbbf24" : TC[primaryType] || "#888" }}>{c.score.total}</span>
@@ -946,6 +975,7 @@ function App() {
                     <div style={{ display:"flex", gap:"3px" }}>{c.types.map(t => <TypeBadge key={t} type={t} small />)}</div>
                     <SetupBadge setupOptions={c.setupOptions} />
                     <span style={{ fontSize:"10px", color:"#4a4858", fontStyle:"italic" }}>{c.ability}</span>
+                    <span style={{ fontSize:"10px", color: c.itemLocked ? "#ef4444" : "#4a4858" }}>{c.itemLocked ? "⚠ no item" : c.item}</span>
                     {c.score.hasStabSE && <span style={{ fontSize:"9px", padding:"2px 8px", borderRadius:"4px", background:"rgba(251,191,36,0.1)", color:"#fbbf24", fontWeight:800, border:"1px solid rgba(251,191,36,0.2)" }}>★ STAB SE</span>}
                     {c.score.fullImmune && <span style={{ fontSize:"9px", padding:"2px 8px", borderRadius:"4px", background:"rgba(34,211,238,0.1)", color:"#22d3ee", fontWeight:800, border:"1px solid rgba(34,211,238,0.2)" }}>🛡 IMMUNE</span>}
                     <span style={{ marginLeft:"auto", fontWeight:900, fontSize: i === 0 ? "26px" : "20px", fontFamily:"'Rajdhani',sans-serif",
