@@ -11,21 +11,13 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0f0e17;
-      background-image:
-        radial-gradient(ellipse at 20% 0%, rgba(86,171,47,0.06) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 100%, rgba(99,144,240,0.04) 0%, transparent 50%);
-      min-height: 100vh;
-    }
+    body { background: #0f0e17; background-image: radial-gradient(ellipse at 20% 0%, rgba(86,171,47,0.06) 0%, transparent 50%), radial-gradient(ellipse at 80% 100%, rgba(99,144,240,0.04) 0%, transparent 50%); min-height: 100vh; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #2a2936; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #56ab2f; }
     input::placeholder { color: #3a3850; }
     @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
-    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
     .card-hover:hover { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important; }
   </style>
 </head>
@@ -435,63 +427,68 @@ function recommendMoves(counter, bossTypes, teraType) {
   return moves.slice(0, 4);
 }
 
-
-
-// ─── TYPE BADGE COLORS WITH RICHER TONES ───
-const TC2 = {
-  Normal:["#A8A77A","#8a896a"], Fire:["#FF7F50","#cc5533"], Water:["#5B8FEE","#3a6cc7"],
-  Electric:["#F7D02C","#d4b020"], Grass:["#5DBE3B","#449e28"], Ice:["#7ED4E6","#5bb8cc"],
-  Fighting:["#D73B47","#b82a35"], Poison:["#B55DA4","#944a87"], Ground:["#D4A546","#b88c35"],
-  Flying:["#A4BBEF","#7d99d4"], Psychic:["#F85888","#d43d6a"], Bug:["#A8B820","#8a9a18"],
-  Rock:["#B8A038","#9a852a"], Ghost:["#7B62A3","#5f4a85"], Dragon:["#7038F8","#5520d6"],
-  Dark:["#7E6252","#5f4a3e"], Steel:["#B8B8D0","#9898b0"], Fairy:["#EE99AC","#d47a90"],
-};
-
-const darkText = ["Electric","Ground","Ice","Steel","Normal"];
+// ─── UI COMPONENTS ───
+const darkText = ["Electric","Ground","Ice","Steel","Normal","Fairy"];
 
 const TypeBadge = ({ type, small, onClick, selected, glow }) => (
   <span onClick={onClick} style={{
-    display:"inline-flex", alignItems:"center", justifyContent:"center",
-    padding: small ? "2px 8px" : "5px 14px", minWidth: small ? "auto" : "48px",
-    borderRadius:"6px", background: `linear-gradient(145deg, ${TC2[type]?.[0]||"#888"}, ${TC2[type]?.[1]||"#666"})`,
+    display:"inline-block", padding: small ? "2px 8px" : "4px 12px",
+    borderRadius:"6px", background: `linear-gradient(135deg, ${TC[type] || "#888"}, ${TC[type]+"cc" || "#888cc"})`,
     color: darkText.includes(type) ? "#1a1a2e" : "#fff",
-    fontSize: small ? "9px" : "10px", fontWeight:800, letterSpacing:"1px", textTransform:"uppercase",
-    fontFamily:"'Exo 2',sans-serif",
+    fontSize: small ? "10px" : "11px", fontWeight:800, letterSpacing:"0.8px", textTransform:"uppercase",
     cursor: onClick ? "pointer" : "default",
-    border: selected ? "2px solid rgba(255,255,255,0.9)" : "1px solid rgba(255,255,255,0.1)",
-    boxShadow: glow ? `0 2px 12px ${TC2[type]?.[0]||"#888"}55, inset 0 1px 0 rgba(255,255,255,0.2)` :
-      selected ? `0 2px 12px ${TC2[type]?.[0]||"#888"}66, 0 0 0 1px rgba(255,255,255,0.3)` :
-      "0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)",
-    transition:"all 0.2s ease",
-    textShadow: darkText.includes(type) ? "none" : "0 1px 2px rgba(0,0,0,0.4)",
+    border: selected ? "2px solid #fff" : "2px solid transparent",
+    boxShadow: glow ? `0 0 12px ${TC[type]}44` : selected ? `0 0 8px ${TC[type]}66` : "none",
+    transition:"all 0.2s ease", textShadow: darkText.includes(type) ? "none" : "0 1px 2px rgba(0,0,0,0.3)",
   }}>{type}</span>
 );
 
 const ScoreBar = ({ label, value, max, color, bonus }) => (
-  <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"5px" }}>
-    <span style={{ fontSize:"10px", color:"#6a6580", minWidth:"54px", textAlign:"right", fontWeight:600, fontFamily:"'JetBrains Mono',monospace" }}>{label}</span>
-    <div style={{ flex:1, height:"8px", background:"rgba(255,255,255,0.04)", borderRadius:"4px", overflow:"hidden" }}>
+  <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"4px" }}>
+    <span style={{ fontSize:"10px", color:"#8a857e", minWidth:"56px", textAlign:"right", fontWeight:500 }}>{label}</span>
+    <div style={{ flex:1, height:"8px", background:"rgba(255,255,255,0.04)", borderRadius:"4px", overflow:"hidden", position:"relative" }}>
       <div style={{
         width:`${Math.min(100, (value/max)*100)}%`, height:"100%",
-        background:`linear-gradient(90deg, ${color}66, ${color})`,
-        borderRadius:"4px", transition:"width 0.5s cubic-bezier(0.4,0,0.2,1)",
-        boxShadow: value > max*0.6 ? `0 0 8px ${color}33` : "none",
+        background:`linear-gradient(90deg, ${color}88, ${color})`,
+        borderRadius:"4px", transition:"width 0.4s ease-out",
+        boxShadow: value > max*0.5 ? `0 0 6px ${color}44` : "none",
       }} />
     </div>
-    <span style={{ fontSize:"11px", color:"#c8c4d4", minWidth:"18px", fontWeight:700, fontFamily:"'JetBrains Mono',monospace" }}>{value}</span>
-    {bonus > 0 && <span style={{ fontSize:"10px", color:"#fbbf24", fontWeight:800, fontFamily:"'JetBrains Mono',monospace" }}>+{bonus}</span>}
+    <span style={{ fontSize:"11px", color:"#d0ccc6", minWidth:"20px", fontWeight:700 }}>{value}</span>
+    {bonus > 0 && <span style={{ fontSize:"10px", color:"#fbbf24", fontWeight:800 }}>+{bonus}</span>}
   </div>
 );
 
 const SetupBadge = ({ type }) => {
   const config = {
-    cm:["CM","#6390F0"], np:["NP","#705746"], bu:["BU","#C22E28"], sd:["SD","#C22E28"],
-    dd:["DD","#6F35FC"], qd:["QD","#F95587"], ss:["SS","#F95587"], none:["—","#444"],
+    cm: { label:"Calm Mind", color:"#6390F0", bg:"rgba(99,144,240,0.12)" },
+    np: { label:"Nasty Plot", color:"#705746", bg:"rgba(112,87,70,0.15)" },
+    bu: { label:"Bulk Up", color:"#C22E28", bg:"rgba(194,46,40,0.12)" },
+    sd: { label:"Swords Dance", color:"#C22E28", bg:"rgba(194,46,40,0.12)" },
+    dd: { label:"Dragon Dance", color:"#6F35FC", bg:"rgba(111,53,252,0.12)" },
+    qd: { label:"Quiver Dance", color:"#F95587", bg:"rgba(249,85,135,0.12)" },
+    ss: { label:"Shell Smash", color:"#F95587", bg:"rgba(249,85,135,0.12)" },
+    none: { label:"No Setup", color:"#555", bg:"rgba(255,255,255,0.03)" },
   };
-  const [label,col] = config[type] || config.none;
-  return <span style={{ fontSize:"10px", padding:"2px 8px", borderRadius:"5px", background:`${col}18`, color:col, fontWeight:800, border:`1px solid ${col}30`, fontFamily:"'JetBrains Mono',monospace", letterSpacing:"0.5px" }}>{label}</span>;
+  const c = config[type] || config.none;
+  return <span style={{ fontSize:"9px", padding:"2px 8px", borderRadius:"4px", background:c.bg, color:c.color, fontWeight:700, border:`1px solid ${c.color}22`, letterSpacing:"0.3px" }}>{c.label}</span>;
 };
 
+const StatBar = ({ label, value, maxVal=255, warn }) => {
+  const pct = Math.min(100, (value/maxVal)*100);
+  const hue = pct < 30 ? 0 : pct < 50 ? 30 : pct < 70 ? 60 : 120;
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:"4px" }}>
+      <span style={{ fontSize:"9px", color:"#7a756e", minWidth:"26px", textAlign:"right" }}>{label}</span>
+      <div style={{ width:"50px", height:"5px", background:"rgba(255,255,255,0.06)", borderRadius:"3px", overflow:"hidden" }}>
+        <div style={{ width:`${pct}%`, height:"100%", background: warn ? "#EE8130" : `hsl(${hue},50%,50%)`, borderRadius:"3px" }} />
+      </div>
+      <span style={{ fontSize:"10px", color: warn ? "#EE8130" : "#ccc", fontWeight: warn ? 800 : 600, minWidth:"24px" }}>{value}</span>
+    </div>
+  );
+};
+
+// ─── MAIN APP ───
 function App() {
   const { data, loading, error } = useDataLoader();
   const [search, setSearch] = useState("");
@@ -503,6 +500,28 @@ function App() {
   const [bossStyle, setBossStyle] = useState("mixed");
   const [raidMode, setRaidMode] = useState("solo");
   const [starLevel, setStarLevel] = useState(6);
+  const [showTera, setShowTera] = useState(false);
+
+  // ─── MY POKEMON BOX ───
+  const [myPokemon, setMyPokemon] = useState(() => {
+    try { const saved = localStorage.getItem("cobbleverse_my_pokemon"); return saved ? JSON.parse(saved) : []; }
+    catch { return []; }
+  });
+  const [mySearch, setMySearch] = useState("");
+  const [showMyPanel, setShowMyPanel] = useState(false);
+  const [showMyDD, setShowMyDD] = useState(false);
+
+  // Persist to localStorage whenever myPokemon changes
+  useEffect(() => {
+    try { localStorage.setItem("cobbleverse_my_pokemon", JSON.stringify(myPokemon)); } catch {}
+  }, [myPokemon]);
+
+  const addMyPokemon = (name) => {
+    if (!myPokemon.includes(name)) setMyPokemon(prev => [...prev, name].sort());
+    setMySearch(""); setShowMyDD(false);
+  };
+  const removeMyPokemon = (name) => setMyPokemon(prev => prev.filter(n => n !== name));
+  const clearMyPokemon = () => { if (confirm("Remove all Pokemon from your box?")) setMyPokemon([]); };
 
   const pokemonNames = useMemo(() => {
     if (!data) return [];
@@ -513,7 +532,8 @@ function App() {
 
   const filtered = useMemo(() => {
     if (!search || search.length < 1) return [];
-    return pokemonNames.filter(n => n.toLowerCase().includes(search.toLowerCase())).slice(0, 10);
+    const s = search.toLowerCase();
+    return pokemonNames.filter(n => n.toLowerCase().includes(s)).slice(0, 12);
   }, [search, pokemonNames]);
 
   const bossTypes = useMemo(() => {
@@ -523,8 +543,12 @@ function App() {
     return [];
   }, [selectedBoss, data, useManual, manualTypes]);
 
-  const bossMoveset = useMemo(() => selectedBoss && data ? getBossMoveset(data.boss, selectedBoss, starLevel) : null, [selectedBoss, data, starLevel]);
+  const bossMoveset = useMemo(() =>
+    selectedBoss && data ? getBossMoveset(data.boss, selectedBoss, starLevel) : null,
+  [selectedBoss, data, starLevel]);
+
   const autoBossStyle = useMemo(() => bossMoveset ? detectBossStyle(bossMoveset) : null, [bossMoveset]);
+
   const bossStats = useMemo(() => {
     if (!selectedBoss || !data) return null;
     for (const [id, p] of Object.entries(data.pokemon)) { if (p.name === selectedBoss) return p; }
@@ -547,51 +571,89 @@ function App() {
       if (!counter || counter.attackMoves.length === 0) continue;
       const score = scoreCounter(counter, bossTypes, teraType || null, bossStyle, raidMode, bossMoveset, bossStats);
       if (score.total <= 0) continue;
-      counters.push({ ...counter, score, recMoves: recommendMoves(counter, bossTypes, teraType || null) });
+      const recMoves = recommendMoves(counter, bossTypes, teraType || null);
+      counters.push({ ...counter, score, recMoves });
     }
     return counters.sort((a, b) => b.score.total - a.score.total).slice(0, 50);
   }, [data, bossTypes, teraType, bossStyle, raidMode, bossMoveset, bossStats]);
+
+  // My Pokemon filtered results
+  const myFilteredSearch = useMemo(() => {
+    if (!mySearch || mySearch.length < 1 || !pokemonNames) return [];
+    const s = mySearch.toLowerCase();
+    return pokemonNames.filter(n => n.toLowerCase().includes(s) && !myPokemon.includes(n)).slice(0, 8);
+  }, [mySearch, pokemonNames, myPokemon]);
+
+  const myResults = useMemo(() => {
+    if (!data || !bossTypes || bossTypes.length === 0 || myPokemon.length === 0) return [];
+    const myNames = new Set(myPokemon);
+    const counters = [];
+    for (const [pid, poke] of Object.entries(data.pokemon)) {
+      if (!myNames.has(poke.name)) continue;
+      const learnset = data.learnsets[pid];
+      if (!learnset) continue;
+      const counter = buildCounter(pid, data.pokemon, data.moves, learnset, data.abilities, data.tags);
+      if (!counter || counter.attackMoves.length === 0) continue;
+      const score = scoreCounter(counter, bossTypes, teraType || null, bossStyle, raidMode, bossMoveset, bossStats);
+      const recMoves = recommendMoves(counter, bossTypes, teraType || null);
+      counters.push({ ...counter, score, recMoves });
+    }
+    return counters.sort((a, b) => b.score.total - a.score.total);
+  }, [data, bossTypes, teraType, bossStyle, raidMode, bossMoveset, bossStats, myPokemon]);
 
   const toggleManualType = (t) => {
     setManualTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : prev.length < 2 ? [...prev, t] : [prev[1], t]);
     setUseManual(true); setSelectedBoss(null);
   };
 
-  if (loading) return <div style={{fontFamily:"'Exo 2',sans-serif",background:"#0f0e17",color:"#fff",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px"}}>Loading...</div>;
-  if (error) return <div style={{fontFamily:"'Exo 2',sans-serif",background:"#0f0e17",color:"#ef4444",minHeight:"100vh",padding:"40px",textAlign:"center"}}>{error}</div>;
+  if (loading) return (
+    <div style={{ fontFamily:"'Rajdhani',sans-serif", background:"#0f0e13", color:"#e8e4de", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ textAlign:"center" }}>
+        <div style={{ fontSize:"42px", fontWeight:900, background:"linear-gradient(135deg, #56ab2f, #a8e063)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>COBBLEVERSE</div>
+        <div style={{ fontSize:"14px", color:"#555", marginTop:"8px" }}>Loading Pokémon database...</div>
+      </div>
+    </div>
+  );
 
-  const accentColor = bossTypes.length > 0 ? (TC2[bossTypes[0]]?.[0] || "#56ab2f") : "#56ab2f";
+  if (error) return (
+    <div style={{ fontFamily:"'Rajdhani',sans-serif", background:"#0f0e13", color:"#e8e4de", minHeight:"100vh", padding:"40px", textAlign:"center" }}>
+      <div style={{ fontSize:"20px", color:"#ef4444" }}>Failed to load data</div>
+      <div style={{ fontSize:"13px", color:"#555", marginTop:"8px" }}>{error}</div>
+    </div>
+  );
+
+  const topType = results[0]?.types?.[0];
 
   return (
-    <div style={{ fontFamily:"'Exo 2',sans-serif", color:"#e2dff0", minHeight:"100vh", padding:"20px 16px" }}>
-      <div style={{ maxWidth:"920px", margin:"0 auto" }}>
+    <div style={{ fontFamily:"'Outfit',sans-serif", background:"#0f0e13", color:"#e8e4de", minHeight:"100vh" }}>
+      {/* Header */}
+      <div style={{ background:"linear-gradient(180deg, #161520 0%, #0f0e13 100%)", borderBottom:"1px solid rgba(86,171,47,0.15)", padding:"24px 16px 20px", textAlign:"center" }}>
+        <h1 style={{ fontSize:"36px", fontWeight:900, letterSpacing:"6px", margin:0, fontFamily:"'Rajdhani',sans-serif", background:"linear-gradient(135deg, #56ab2f, #a8e063)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>COBBLEVERSE</h1>
+        <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#4a4858", marginTop:"2px", fontWeight:600 }}>RAID COUNTER ANALYZER</div>
+        <div style={{ fontSize:"10px", color:"#2e2d38", marginTop:"4px" }}>{pokemonNames.length} Pokémon · {Object.keys(data.moves).length} Moves</div>
+      </div>
 
-        {/* ═══ HEADER ═══ */}
-        <div style={{ textAlign:"center", marginBottom:"28px", animation:"fadeUp 0.6s ease-out" }}>
-          <h1 style={{ fontSize:"36px", fontWeight:900, letterSpacing:"6px", margin:0,
-            background:"linear-gradient(135deg, #56ab2f, #a8e063)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-            filter:"drop-shadow(0 2px 8px rgba(86,171,47,0.3))" }}>COBBLEVERSE</h1>
-          <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#4a4660", marginTop:"4px", fontWeight:600 }}>RAID COUNTER ANALYZER</div>
-          <div style={{ fontSize:"10px", color:"#2a2840", marginTop:"6px", fontFamily:"'JetBrains Mono',monospace" }}>{pokemonNames.length} Pokémon · {Object.keys(data.moves).length} Moves</div>
-        </div>
-
-        {/* ═══ SEARCH & CONTROLS PANEL ═══ */}
-        <div style={{ background:"linear-gradient(145deg, rgba(22,20,38,0.9), rgba(16,14,28,0.95))", borderRadius:"16px", padding:"20px", border:"1px solid rgba(86,171,47,0.12)", boxShadow:"0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)", marginBottom:"20px", animation:"fadeUp 0.6s ease-out 0.1s both" }}>
-
-          {/* Search */}
-          <div style={{ position:"relative", marginBottom:"14px" }}>
-            <input value={search} onChange={e => { setSearch(e.target.value); setShowDD(true); if (!e.target.value) setSelectedBoss(null); }}
-              onFocus={() => setShowDD(true)} placeholder="Search raid boss..."
-              style={{ width:"100%", padding:"14px 18px", borderRadius:"12px", border:"1px solid rgba(86,171,47,0.2)", background:"rgba(0,0,0,0.4)", color:"#e2dff0", fontSize:"16px", fontFamily:"'Exo 2',sans-serif", fontWeight:600, outline:"none", boxSizing:"border-box", transition:"border-color 0.2s" }}
-              onMouseEnter={e => e.target.style.borderColor="rgba(86,171,47,0.4)"} onMouseLeave={e => e.target.style.borderColor="rgba(86,171,47,0.2)"}
+      <div style={{ maxWidth:"920px", margin:"0 auto", padding:"20px 16px" }}>
+        {/* Search Card */}
+        <div style={{ background:"linear-gradient(135deg, rgba(22,21,32,0.9), rgba(15,14,19,0.95))", borderRadius:"16px", padding:"20px", border:"1px solid rgba(255,255,255,0.05)", boxShadow:"0 4px 24px rgba(0,0,0,0.3)", marginBottom:"20px" }}>
+          <div style={{ position:"relative" }}>
+            <div style={{ position:"absolute", left:"14px", top:"50%", transform:"translateY(-50%)", fontSize:"16px", opacity:0.3 }}>🔍</div>
+            <input
+              value={search} onChange={e => { setSearch(e.target.value); setShowDD(true); if (!e.target.value) setSelectedBoss(null); }}
+              onFocus={() => setShowDD(true)}
+              placeholder="Search raid boss..."
+              style={{ width:"100%", padding:"14px 16px 14px 40px", borderRadius:"12px", border:"1px solid rgba(86,171,47,0.2)", background:"rgba(0,0,0,0.4)", color:"#e8e4de", fontSize:"16px", fontFamily:"'Outfit',sans-serif", outline:"none", boxSizing:"border-box", transition:"border-color 0.2s" }}
+              onMouseOver={e => e.target.style.borderColor = "rgba(86,171,47,0.5)"}
+              onMouseOut={e => e.target.style.borderColor = "rgba(86,171,47,0.2)"}
             />
             {showDD && filtered.length > 0 && (
-              <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#1a1830", border:"1px solid rgba(86,171,47,0.2)", borderRadius:"0 0 12px 12px", zIndex:10, maxHeight:"320px", overflow:"auto", boxShadow:"0 12px 32px rgba(0,0,0,0.5)" }}>
+              <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#1a1924", border:"1px solid rgba(86,171,47,0.2)", borderRadius:"0 0 12px 12px", zIndex:10, maxHeight:"340px", overflow:"auto", boxShadow:"0 8px 32px rgba(0,0,0,0.5)" }}>
                 {filtered.map(name => {
-                  const pTypes = Object.values(data.pokemon).find(p => p.name === name)?.types || [];
+                  const pTypes = data.pokemon[Object.keys(data.pokemon).find(k => data.pokemon[k].name === name)]?.types || [];
                   return (
-                    <div key={name} onClick={() => selectBoss(name)} style={{ padding:"12px 18px", cursor:"pointer", display:"flex", alignItems:"center", gap:"10px", borderBottom:"1px solid rgba(255,255,255,0.03)", transition:"background 0.15s" }}
-                      onMouseEnter={e => e.currentTarget.style.background="rgba(86,171,47,0.08)"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                    <div key={name} onClick={() => selectBoss(name)} style={{ padding:"10px 16px", cursor:"pointer", display:"flex", alignItems:"center", gap:"10px", borderBottom:"1px solid rgba(255,255,255,0.03)", transition:"background 0.15s" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "rgba(86,171,47,0.08)"}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                       <span style={{ fontWeight:700, fontSize:"14px" }}>{name}</span>
                       <div style={{ display:"flex", gap:"3px" }}>{pTypes.map(t => <TypeBadge key={t} type={t} small />)}</div>
                     </div>
@@ -601,106 +663,89 @@ function App() {
             )}
           </div>
 
-          {/* Manual type row */}
-          <div style={{ marginBottom:"12px" }}>
-            <div style={{ fontSize:"9px", color:"#3a3850", letterSpacing:"1.5px", fontWeight:700, marginBottom:"6px" }}>OR SELECT TYPES</div>
+          {/* Manual type select */}
+          <div style={{ marginTop:"14px" }}>
+            <div style={{ fontSize:"10px", color:"#4a4858", marginBottom:"8px", letterSpacing:"1px", fontWeight:600 }}>OR SELECT TYPES</div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"4px" }}>
               {TYPES.map(t => <TypeBadge key={t} type={t} small onClick={() => toggleManualType(t)} selected={manualTypes.includes(t) && useManual} />)}
             </div>
           </div>
 
-          {/* Tera type */}
+          {/* Tera toggle */}
           {bossTypes.length > 0 && (
-            <div style={{ marginBottom:"14px" }}>
-              <div style={{ fontSize:"9px", color:"#3a3850", letterSpacing:"1.5px", fontWeight:700, marginBottom:"6px" }}>TERA TYPE</div>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:"4px" }}>
-                {TYPES.map(t => <TypeBadge key={t} type={t} small onClick={() => setTeraType(teraType === t ? "" : t)} selected={teraType === t} />)}
+            <div style={{ marginTop:"14px" }}>
+              <div onClick={() => setShowTera(!showTera)} style={{ fontSize:"10px", color:"#56ab2f", cursor:"pointer", letterSpacing:"1px", fontWeight:600, display:"flex", alignItems:"center", gap:"6px" }}>
+                <span style={{ transform: showTera ? "rotate(90deg)" : "none", transition:"transform 0.2s", display:"inline-block" }}>▶</span>
+                TERA TYPE {teraType && <TypeBadge type={teraType} small />}
               </div>
+              {showTera && (
+                <div style={{ display:"flex", flexWrap:"wrap", gap:"4px", marginTop:"8px" }}>
+                  {TYPES.map(t => <TypeBadge key={t} type={t} small onClick={() => setTeraType(teraType === t ? "" : t)} selected={teraType === t} />)}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Controls row */}
-          <div style={{ display:"flex", gap:"16px", flexWrap:"wrap" }}>
-            {/* Raid Stars */}
+          {/* Controls */}
+          <div style={{ display:"flex", gap:"16px", marginTop:"18px", flexWrap:"wrap" }}>
             <div>
-              <div style={{ fontSize:"9px", color: accentColor, letterSpacing:"1.5px", fontWeight:700, marginBottom:"6px" }}>RAID STARS</div>
+              <div style={{ fontSize:"9px", letterSpacing:"2px", color:"#4a4858", fontWeight:700, marginBottom:"6px" }}>STARS</div>
               <div style={{ display:"flex", gap:"4px" }}>
-                {[[5,"5★ Lv75"],[6,"6★ Lv90"],[7,"7★ Lv100"]].map(([s,l]) => (
-                  <button key={s} onClick={() => setStarLevel(s)} style={{
-                    padding:"7px 14px", borderRadius:"8px", fontFamily:"'Exo 2',sans-serif", cursor:"pointer", fontWeight:700, fontSize:"11px",
-                    border: starLevel===s ? `1px solid ${accentColor}88` : "1px solid rgba(255,255,255,0.06)",
-                    background: starLevel===s ? `${accentColor}18` : "rgba(255,255,255,0.02)",
-                    color: starLevel===s ? accentColor : "#5a5670", transition:"all 0.2s",
-                  }}>{l}</button>
+                {[[5,"5★","#6b7280"],[6,"6★","#eab308"],[7,"7★","#ef4444"]].map(([s,l,col]) => (
+                  <button key={s} onClick={() => { setStarLevel(s); if (selectedBoss && data) { const ms = getBossMoveset(data.boss, selectedBoss, s); if (ms) setBossStyle(detectBossStyle(ms)); }}}
+                    style={{ padding:"6px 14px", borderRadius:"8px", fontFamily:"inherit", cursor:"pointer", fontSize:"12px", fontWeight:800,
+                    border: starLevel===s ? `1px solid ${col}` : "1px solid rgba(255,255,255,0.06)",
+                    background: starLevel===s ? `${col}18` : "rgba(255,255,255,0.02)",
+                    color: starLevel===s ? col : "#555",
+                    boxShadow: starLevel===s ? `0 0 12px ${col}22` : "none",
+                    transition:"all 0.2s" }}>{l}</button>
                 ))}
               </div>
             </div>
-            {/* Boss Attacks */}
             <div>
-              <div style={{ fontSize:"9px", color:accentColor, letterSpacing:"1.5px", fontWeight:700, marginBottom:"6px" }}>
-                BOSS ATTACKS {autoBossStyle && <span style={{color:"#3a3850",fontWeight:400}}>· auto: {autoBossStyle}</span>}
-              </div>
+              <div style={{ fontSize:"9px", letterSpacing:"2px", color:"#4a4858", fontWeight:700, marginBottom:"6px" }}>BOSS TYPE {autoBossStyle && <span style={{color:"#333",fontWeight:400}}>({autoBossStyle})</span>}</div>
               <div style={{ display:"flex", gap:"4px" }}>
-                {[["physical","⚔ Physical","#ef4444"],["special","✦ Special","#60a5fa"],["mixed","◆ Mixed","#a78bfa"]].map(([s,l,col]) => (
-                  <button key={s} onClick={() => setBossStyle(s)} style={{
-                    padding:"7px 14px", borderRadius:"8px", fontFamily:"'Exo 2',sans-serif", cursor:"pointer", fontWeight:700, fontSize:"11px",
-                    border: bossStyle===s ? `1px solid ${col}88` : "1px solid rgba(255,255,255,0.06)",
+                {[["physical","Physical","#C22E28"],["special","Special","#6390F0"],["mixed","Mixed","#A8A77A"]].map(([s,l,col]) => (
+                  <button key={s} onClick={() => setBossStyle(s)} style={{ padding:"6px 14px", borderRadius:"8px", fontFamily:"inherit", cursor:"pointer", fontSize:"11px", fontWeight:700,
+                    border: bossStyle===s ? `1px solid ${col}` : "1px solid rgba(255,255,255,0.06)",
                     background: bossStyle===s ? `${col}18` : "rgba(255,255,255,0.02)",
-                    color: bossStyle===s ? col : "#5a5670", transition:"all 0.2s",
-                  }}>{l}</button>
+                    color: bossStyle===s ? col : "#555", transition:"all 0.2s" }}>{l}</button>
                 ))}
               </div>
             </div>
-            {/* Raid Mode */}
             <div>
-              <div style={{ fontSize:"9px", color:accentColor, letterSpacing:"1.5px", fontWeight:700, marginBottom:"6px" }}>MODE</div>
+              <div style={{ fontSize:"9px", letterSpacing:"2px", color:"#4a4858", fontWeight:700, marginBottom:"6px" }}>MODE</div>
               <div style={{ display:"flex", gap:"4px" }}>
-                {[["solo","Solo","#fbbf24"],["group","Group","#34d399"]].map(([m,l,col]) => (
-                  <button key={m} onClick={() => setRaidMode(m)} style={{
-                    padding:"7px 14px", borderRadius:"8px", fontFamily:"'Exo 2',sans-serif", cursor:"pointer", fontWeight:700, fontSize:"11px",
-                    border: raidMode===m ? `1px solid ${col}88` : "1px solid rgba(255,255,255,0.06)",
+                {[["solo","Solo","#eab308"],["group","Group","#56ab2f"]].map(([m,l,col]) => (
+                  <button key={m} onClick={() => setRaidMode(m)} style={{ padding:"6px 14px", borderRadius:"8px", fontFamily:"inherit", cursor:"pointer", fontSize:"11px", fontWeight:700,
+                    border: raidMode===m ? `1px solid ${col}` : "1px solid rgba(255,255,255,0.06)",
                     background: raidMode===m ? `${col}18` : "rgba(255,255,255,0.02)",
-                    color: raidMode===m ? col : "#5a5670", transition:"all 0.2s",
-                  }}>{l}</button>
+                    color: raidMode===m ? col : "#555", transition:"all 0.2s" }}>{l}</button>
                 ))}
               </div>
             </div>
           </div>
         </div>
 
-        {/* ═══ BOSS INFO CARD ═══ */}
+        {/* Boss Info Card */}
         {bossTypes.length > 0 && (
-          <div style={{
-            background:`linear-gradient(145deg, ${accentColor}0a, rgba(16,14,28,0.95))`,
-            borderRadius:"16px", padding:"20px", marginBottom:"20px",
-            border:`1px solid ${accentColor}25`,
-            boxShadow:`0 4px 24px rgba(0,0,0,0.3), 0 0 40px ${accentColor}06`,
-            animation:"fadeUp 0.5s ease-out 0.2s both",
-          }}>
-            <div style={{ display:"flex", alignItems:"center", gap:"12px", flexWrap:"wrap", marginBottom: bossStats || bossMoveset ? "14px" : 0 }}>
-              <span style={{ fontWeight:900, fontSize:"22px", letterSpacing:"1px" }}>{selectedBoss || "Custom"}</span>
-              <div style={{ display:"flex", gap:"5px" }}>{bossTypes.map(t => <TypeBadge key={t} type={t} glow />)}</div>
-              {teraType && <><span style={{ fontSize:"10px", color:"#4a4660", fontWeight:700 }}>TERA →</span><TypeBadge type={teraType} glow /><span style={{ fontSize:"10px", color:"#3a3850" }}>defends as {teraType}</span></>}
+          <div style={{ background:"linear-gradient(135deg, rgba(22,21,32,0.95), rgba(15,14,19,0.98))", borderRadius:"16px", padding:"18px 20px", border:`1px solid ${TC[bossTypes[0]]}33`, boxShadow:`0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 ${TC[bossTypes[0]]}11`, marginBottom:"20px" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:"10px", flexWrap:"wrap", marginBottom:"12px" }}>
+              <span style={{ fontWeight:800, fontSize:"20px", fontFamily:"'Rajdhani',sans-serif" }}>{selectedBoss || "Custom"}</span>
+              <div style={{ display:"flex", gap:"4px" }}>{bossTypes.map(t => <TypeBadge key={t} type={t} glow />)}</div>
+              {teraType && <><span style={{ fontSize:"10px", color:"#555" }}>TERA →</span><TypeBadge type={teraType} glow /><span style={{ fontSize:"9px", color:"#4a4858" }}>defends as {teraType}</span></>}
             </div>
 
             {/* Boss Stats */}
             {bossStats && (
-              <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom: bossMoveset ? "14px" : 0, alignItems:"center" }}>
+              <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"12px" }}>
                 {[["HP",bossStats.hp],["Atk",bossStats.atk],["Def",bossStats.def],["SpA",bossStats.spa],["SpD",bossStats.spd],["Spe",bossStats.spe]].map(([label, val]) => {
                   const isWeak = (label === "Def" && bossStats.def < bossStats.spd) || (label === "SpD" && bossStats.spd < bossStats.def);
-                  return (
-                    <span key={label} style={{ padding:"4px 8px", borderRadius:"6px", fontSize:"11px", fontFamily:"'JetBrains Mono',monospace",
-                      background: isWeak ? "rgba(239,68,68,0.1)" : "rgba(255,255,255,0.03)",
-                      border: isWeak ? "1px solid rgba(239,68,68,0.25)" : "1px solid rgba(255,255,255,0.04)",
-                      color: isWeak ? "#ef4444" : "#6a6580",
-                    }}>
-                      {label} <span style={{ fontWeight:700, color: isWeak ? "#f87171" : "#c8c4d4" }}>{val}</span>
-                    </span>
-                  );
+                  return <StatBar key={label} label={label} value={val} warn={isWeak} />;
                 })}
                 {bossStats.def !== bossStats.spd && (
-                  <span style={{ fontSize:"10px", color:"#f97316", fontWeight:700, marginLeft:"4px" }}>
-                    → {bossStats.def < bossStats.spd ? "physical" : "special"} attackers favored
+                  <span style={{ fontSize:"10px", color:"#EE8130", alignSelf:"center", fontWeight:600 }}>
+                    ▸ {bossStats.def < bossStats.spd ? "Physical" : "Special"} attackers favored
                   </span>
                 )}
               </div>
@@ -709,13 +754,14 @@ function App() {
             {/* Boss Moveset */}
             {bossMoveset && (
               <div>
-                <div style={{ fontSize:"9px", letterSpacing:"2px", color:"#ef4444", fontWeight:800, marginBottom:"8px" }}>BOSS MOVESET · LV{starLevel >= 7 ? 100 : starLevel >= 6 ? 90 : 75}</div>
+                <div style={{ fontSize:"9px", letterSpacing:"1.5px", color:"#C22E28", fontWeight:700, marginBottom:"8px" }}>BOSS MOVESET — LV{starLevel >= 7 ? 100 : starLevel >= 6 ? 90 : 75}</div>
                 <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
                   {bossMoveset.map((m, i) => (
-                    <div key={i} style={{ display:"flex", alignItems:"center", gap:"6px", padding:"6px 12px", borderRadius:"10px", background:`linear-gradient(135deg, ${TC2[m.type]?.[0]||"#888"}0c, transparent)`, border:`1px solid ${TC2[m.type]?.[0]||"#888"}20` }}>
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:"5px", padding:"5px 10px", borderRadius:"8px", background:`linear-gradient(135deg, ${TC[m.type]}11, ${TC[m.type]}08)`, border:`1px solid ${TC[m.type]}22` }}>
                       <TypeBadge type={m.type} small />
-                      <span style={{ fontSize:"12px", fontWeight:700 }}>{m.name}</span>
-                      {m.bp > 0 && <span style={{ fontSize:"11px", color: m.cat==="P" ? "#f87171" : "#60a5fa", fontWeight:800, fontFamily:"'JetBrains Mono',monospace" }}>{m.bp}{m.cat==="P"?"⚔":"✦"}</span>}
+                      <span style={{ fontSize:"12px", fontWeight:600 }}>{m.name}</span>
+                      {m.bp > 0 && <span style={{ fontSize:"10px", color: m.cat==="P" ? "#ef4444" : "#60a5fa", fontWeight:700 }}>{m.bp}{m.cat==="P"?"⚔":"✦"}</span>}
+                      {m.bp === 0 && <span style={{ fontSize:"10px", color:"#444" }}>status</span>}
                     </div>
                   ))}
                 </div>
@@ -724,63 +770,172 @@ function App() {
           </div>
         )}
 
-        {/* ═══ RESULTS ═══ */}
-        {results.length > 0 && (
-          <div style={{ animation:"fadeUp 0.5s ease-out 0.3s both" }}>
-            <div style={{ display:"flex", alignItems:"baseline", gap:"12px", marginBottom:"16px", paddingBottom:"10px", borderBottom:`1px solid ${accentColor}15` }}>
-              <span style={{ fontSize:"14px", letterSpacing:"4px", fontWeight:900,
-                background:`linear-gradient(135deg, ${accentColor}, ${accentColor}88)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-              }}>TOP COUNTERS</span>
-              <span style={{ fontSize:"11px", color:"#3a3850", fontWeight:600 }}>
-                {raidMode === "solo" ? "Solo" : "Group"} · vs {bossStyle === "physical" ? "Physical" : bossStyle === "special" ? "Special" : "Mixed"}
+        {/* ═══ MY POKEMON BOX ═══ */}
+        <div style={{ marginBottom:"20px" }}>
+          <div onClick={() => setShowMyPanel(!showMyPanel)} style={{ display:"flex", alignItems:"center", gap:"10px", cursor:"pointer", padding:"12px 16px", background:"rgba(251,191,36,0.04)", borderRadius: showMyPanel ? "12px 12px 0 0" : "12px", border:"1px solid rgba(251,191,36,0.15)", transition:"all 0.2s" }}>
+            <span style={{ fontSize:"16px" }}>{showMyPanel ? "▾" : "▸"}</span>
+            <span style={{ fontSize:"13px", fontWeight:800, letterSpacing:"2px", color:"#fbbf24" }}>MY POKEMON</span>
+            <span style={{ fontSize:"11px", color:"#6a6580" }}>{myPokemon.length} saved</span>
+            {myPokemon.length > 0 && bossTypes.length > 0 && myResults.length > 0 && (
+              <span style={{ marginLeft:"auto", fontSize:"10px", padding:"3px 10px", borderRadius:"6px", background:"rgba(251,191,36,0.1)", color:"#fbbf24", fontWeight:700 }}>
+                Best: {myResults[0].name} ({myResults[0].score.total} pts)
               </span>
-            </div>
+            )}
+          </div>
+          {showMyPanel && (
+            <div style={{ background:"rgba(18,16,32,0.9)", borderRadius:"0 0 12px 12px", border:"1px solid rgba(251,191,36,0.15)", borderTop:"none", padding:"16px" }}>
+              {/* Add Pokemon search */}
+              <div style={{ position:"relative", marginBottom:"12px" }}>
+                <input value={mySearch} onChange={e => { setMySearch(e.target.value); setShowMyDD(true); }}
+                  onFocus={() => setShowMyDD(true)}
+                  placeholder="Add a Pokemon to your box..."
+                  style={{ width:"100%", padding:"10px 14px", borderRadius:"8px", border:"1px solid rgba(251,191,36,0.2)", background:"rgba(0,0,0,0.3)", color:"#e2dff0", fontSize:"14px", fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}
+                />
+                {showMyDD && myFilteredSearch.length > 0 && (
+                  <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#1a1830", border:"1px solid rgba(251,191,36,0.2)", borderRadius:"0 0 8px 8px", zIndex:10, maxHeight:"240px", overflow:"auto", boxShadow:"0 8px 24px rgba(0,0,0,0.5)" }}>
+                    {myFilteredSearch.map(name => {
+                      const pTypes = data ? Object.values(data.pokemon).find(p => p.name === name)?.types || [] : [];
+                      return (
+                        <div key={name} onClick={() => addMyPokemon(name)} style={{ padding:"10px 14px", cursor:"pointer", display:"flex", alignItems:"center", gap:"8px", borderBottom:"1px solid rgba(255,255,255,0.03)" }}
+                          onMouseEnter={e => e.currentTarget.style.background="rgba(251,191,36,0.08)"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                          <span style={{ fontSize:"11px", color:"#56ab2f", fontWeight:800 }}>+</span>
+                          <span style={{ fontWeight:600, fontSize:"13px" }}>{name}</span>
+                          <div style={{ display:"flex", gap:"2px" }}>{pTypes.map(t => <TypeBadge key={t} type={t} small />)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
-            {results.map((c, i) => {
-              const pColor = TC2[c.types[0]]?.[0] || "#888";
+              {/* Pokemon list */}
+              {myPokemon.length === 0 ? (
+                <div style={{ textAlign:"center", padding:"20px", color:"#3a3850", fontSize:"12px" }}>
+                  No Pokémon added yet. Search above to add your team!
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:"6px", marginBottom:"10px" }}>
+                    {myPokemon.map(name => {
+                      const pTypes = data ? Object.values(data.pokemon).find(p => p.name === name)?.types || [] : [];
+                      return (
+                        <div key={name} style={{ display:"flex", alignItems:"center", gap:"5px", padding:"5px 10px", borderRadius:"8px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)" }}>
+                          {pTypes.map(t => <TypeBadge key={t} type={t} small />)}
+                          <span style={{ fontSize:"12px", fontWeight:600 }}>{name}</span>
+                          <span onClick={() => removeMyPokemon(name)} style={{ cursor:"pointer", fontSize:"14px", color:"#ef4444", marginLeft:"4px", fontWeight:700, lineHeight:1, opacity:0.6, transition:"opacity 0.15s" }}
+                            onMouseEnter={e => e.target.style.opacity=1} onMouseLeave={e => e.target.style.opacity=0.6}>×</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display:"flex", gap:"8px" }}>
+                    <button onClick={clearMyPokemon} style={{ fontSize:"10px", padding:"4px 10px", borderRadius:"6px", border:"1px solid rgba(239,68,68,0.2)", background:"rgba(239,68,68,0.06)", color:"#ef4444", cursor:"pointer", fontFamily:"inherit", fontWeight:600 }}>Clear All</button>
+                    <span style={{ fontSize:"10px", color:"#3a3850", alignSelf:"center" }}>Saved in your browser</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ═══ MY POKEMON RESULTS ═══ */}
+        {myPokemon.length > 0 && bossTypes.length > 0 && myResults.length > 0 && (
+          <div style={{ marginBottom:"24px" }}>
+            <div style={{ display:"flex", alignItems:"baseline", gap:"12px", marginBottom:"12px", paddingBottom:"8px", borderBottom:"1px solid rgba(251,191,36,0.15)" }}>
+              <span style={{ fontSize:"13px", letterSpacing:"3px", color:"#fbbf24", fontWeight:800 }}>YOUR BEST PICKS</span>
+              <span style={{ fontSize:"10px", color:"#4a4660" }}>from your {myPokemon.length} saved Pokémon</span>
+            </div>
+            {myResults.slice(0, 10).map((c, i) => {
+              const primaryType = c.types[0];
               return (
-                <div key={c.id} className="card-hover" style={{
-                  background: i === 0 ? `linear-gradient(145deg, ${pColor}0d, rgba(16,14,28,0.95) 60%)` : "rgba(18,16,32,0.8)",
-                  border: `1px solid ${i < 3 ? pColor+"30" : "rgba(255,255,255,0.04)"}`,
-                  borderLeft: `3px solid ${pColor}${i < 3 ? "cc" : "44"}`,
-                  borderRadius:"14px", padding:"18px 20px", marginBottom:"10px",
-                  transition:"all 0.25s ease", cursor:"default",
-                  boxShadow: i === 0 ? `0 4px 30px ${pColor}15, inset 0 1px 0 rgba(255,255,255,0.03)` : "0 2px 8px rgba(0,0,0,0.2)",
-                  animation: `fadeUp 0.4s ease-out ${0.3 + i*0.03}s both`,
+                <div key={c.id} style={{
+                  background: i === 0 ? "linear-gradient(135deg, rgba(251,191,36,0.06), transparent 60%)" : "rgba(255,255,255,0.01)",
+                  border: `1px solid ${i === 0 ? "rgba(251,191,36,0.25)" : "rgba(255,255,255,0.04)"}`,
+                  borderLeft: `3px solid ${i === 0 ? "#fbbf24" : TC[primaryType]+"66"}`,
+                  borderRadius:"12px", padding:"14px 16px", marginBottom:"8px",
                 }}>
-                  {/* Header */}
+                  <div style={{ display:"flex", alignItems:"center", gap:"8px", flexWrap:"wrap" }}>
+                    <span style={{ fontFamily:"monospace", fontSize:"18px", fontWeight:900, color: i === 0 ? "#fbbf24" : "#4a4660", minWidth:"28px" }}>#{i+1}</span>
+                    <span style={{ fontWeight:800, fontSize:"15px" }}>{c.name}</span>
+                    <div style={{ display:"flex", gap:"3px" }}>{c.types.map(t => <TypeBadge key={t} type={t} small />)}</div>
+                    <SetupBadge type={c.setupType} />
+                    <span style={{ fontSize:"9px", color:"#4a4660", fontStyle:"italic" }}>{c.ability}</span>
+                    {c.score.hasStabSE && <span style={{ fontSize:"8px", padding:"2px 6px", borderRadius:"4px", background:"rgba(251,191,36,0.1)", color:"#fbbf24", fontWeight:800 }}>★ STAB SE</span>}
+                    {c.score.fullImmune && <span style={{ fontSize:"8px", padding:"2px 6px", borderRadius:"4px", background:"rgba(34,211,238,0.1)", color:"#22d3ee", fontWeight:800 }}>🛡 IMMUNE</span>}
+                    <span style={{ marginLeft:"auto", fontWeight:900, fontSize:"18px", color: i === 0 ? "#fbbf24" : TC[primaryType] || "#888" }}>{c.score.total}</span>
+                  </div>
+                  {/* Recommended moves */}
+                  <div style={{ display:"flex", gap:"4px", marginTop:"8px", flexWrap:"wrap" }}>
+                    {c.recMoves.map((m, j) => (
+                      <div key={j} style={{ display:"flex", alignItems:"center", gap:"3px", padding:"3px 8px", borderRadius:"6px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.05)", fontSize:"11px" }}>
+                        <TypeBadge type={m.type} small />
+                        <span style={{ fontWeight:600 }}>{m.name}</span>
+                        {m.bp > 0 && <span style={{ color:"#5a5670", fontSize:"10px" }}>{m.bp}</span>}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Score bars - compact */}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"2px 14px", marginTop:"8px" }}>
+                    <ScoreBar label="Off" value={c.score.offense} max={12} color="#EE8130" bonus={c.score.abilityOff} />
+                    <ScoreBar label="Def" value={c.score.defense} max={10} color="#6390F0" bonus={c.score.abilityDef} />
+                    <ScoreBar label="Setup" value={c.score.setup} max={7} color="#F95587" />
+                    <ScoreBar label="Sust" value={c.score.sustain} max={12} color="#7AC74C" bonus={c.score.abilityHeal} />
+                    <ScoreBar label="Bulk" value={c.score.bulk} max={5} color="#B7B7CE" />
+                    <ScoreBar label="Power" value={c.score.rawDmgBonus} max={7} color="#ef4444" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Results */}
+        {results.length > 0 && (
+          <div>
+            <div style={{ display:"flex", alignItems:"baseline", gap:"12px", marginBottom:"16px", paddingBottom:"8px", borderBottom:"1px solid rgba(86,171,47,0.1)" }}>
+              <span style={{ fontSize:"13px", letterSpacing:"3px", color:"#56ab2f", fontWeight:800, fontFamily:"'Rajdhani',sans-serif" }}>TOP COUNTERS</span>
+              <span style={{ fontSize:"10px", color:"#333", fontWeight:500 }}>{raidMode === "solo" ? "Solo (Offense)" : "Group (Sustain)"} · {bossStyle === "physical" ? "vs Physical" : bossStyle === "special" ? "vs Special" : "vs Mixed"}</span>
+            </div>
+            {results.map((c, i) => {
+              const primaryType = c.types[0];
+              const isTop3 = i < 3;
+              return (
+                <div key={c.id} style={{
+                  background: isTop3 ? `linear-gradient(135deg, ${TC[primaryType]}08, transparent 60%)` : "rgba(255,255,255,0.01)",
+                  border: `1px solid ${isTop3 ? TC[primaryType]+"33" : "rgba(255,255,255,0.04)"}`,
+                  borderLeft: `3px solid ${TC[primaryType]}${isTop3 ? "aa" : "44"}`,
+                  borderRadius:"12px", padding:"16px 18px", marginBottom:"10px",
+                  transition:"all 0.2s ease",
+                  boxShadow: i === 0 ? `0 4px 20px ${TC[primaryType]}11` : "none",
+                }}>
+                  {/* Header row */}
                   <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"12px", flexWrap:"wrap" }}>
                     <span style={{
-                      fontSize: i === 0 ? "30px" : "24px", fontWeight:900, minWidth:"38px",
-                      background: i === 0 ? "linear-gradient(135deg, #fbbf24, #f59e0b)" : i < 3 ? `linear-gradient(135deg, ${pColor}, ${pColor}88)` : "linear-gradient(135deg, #4a4660, #3a3850)",
+                      fontFamily:"'Rajdhani',sans-serif", fontSize: i === 0 ? "28px" : "22px", fontWeight:900, minWidth:"36px",
+                      background: i === 0 ? "linear-gradient(135deg, #fbbf24, #f59e0b)" : i < 3 ? `linear-gradient(135deg, ${TC[primaryType]}, ${TC[primaryType]}aa)` : "linear-gradient(135deg, #444, #333)",
                       WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-                      fontFamily:"'JetBrains Mono',monospace",
                     }}>#{i+1}</span>
-                    <span style={{ fontWeight:800, fontSize:"18px", letterSpacing:"0.5px" }}>{c.name}</span>
-                    <div style={{ display:"flex", gap:"4px" }}>{c.types.map(t => <TypeBadge key={t} type={t} small />)}</div>
+                    <span style={{ fontWeight:800, fontSize:"17px", fontFamily:"'Rajdhani',sans-serif", letterSpacing:"0.5px" }}>{c.name}</span>
+                    <div style={{ display:"flex", gap:"3px" }}>{c.types.map(t => <TypeBadge key={t} type={t} small />)}</div>
                     <SetupBadge type={c.setupType} />
-                    <span style={{ fontSize:"10px", color:"#4a4660", fontStyle:"italic" }}>{c.ability}</span>
-                    {c.score.hasStabSE && <span style={{ fontSize:"9px", padding:"3px 8px", borderRadius:"5px", background:"rgba(251,191,36,0.08)", color:"#fbbf24", fontWeight:800, border:"1px solid rgba(251,191,36,0.15)" }}>★ STAB SE</span>}
-                    {c.score.fullImmune && <span style={{ fontSize:"9px", padding:"3px 8px", borderRadius:"5px", background:"rgba(34,211,238,0.08)", color:"#22d3ee", fontWeight:800, border:"1px solid rgba(34,211,238,0.15)" }}>🛡 IMMUNE</span>}
-                    <span style={{ marginLeft:"auto", fontWeight:900, fontSize: i === 0 ? "28px" : "22px",
-                      fontFamily:"'JetBrains Mono',monospace",
-                      background: i === 0 ? "linear-gradient(135deg, #fbbf24, #f59e0b)" : `linear-gradient(135deg, ${pColor}, #6a6580)`,
+                    <span style={{ fontSize:"10px", color:"#4a4858", fontStyle:"italic" }}>{c.ability}</span>
+                    {c.score.hasStabSE && <span style={{ fontSize:"9px", padding:"2px 8px", borderRadius:"4px", background:"rgba(251,191,36,0.1)", color:"#fbbf24", fontWeight:800, border:"1px solid rgba(251,191,36,0.2)" }}>★ STAB SE</span>}
+                    {c.score.fullImmune && <span style={{ fontSize:"9px", padding:"2px 8px", borderRadius:"4px", background:"rgba(34,211,238,0.1)", color:"#22d3ee", fontWeight:800, border:"1px solid rgba(34,211,238,0.2)" }}>🛡 IMMUNE</span>}
+                    <span style={{ marginLeft:"auto", fontWeight:900, fontSize: i === 0 ? "26px" : "20px", fontFamily:"'Rajdhani',sans-serif",
+                      background: i === 0 ? "linear-gradient(135deg, #fbbf24, #f59e0b)" : `linear-gradient(135deg, ${TC[primaryType]}, #888)`,
                       WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
                     }}>{c.score.total}</span>
                   </div>
 
                   {/* Recommended Moves */}
-                  <div style={{ display:"flex", gap:"5px", marginBottom:"14px", flexWrap:"wrap" }}>
-                    {c.recMoves.map((m, j) => {
-                      const mc = TC2[m.type]?.[0]||"#888";
-                      return (
-                        <div key={j} style={{ display:"flex", alignItems:"center", gap:"5px", padding:"5px 12px", borderRadius:"8px", background:`${mc}0c`, border:`1px solid ${mc}1a` }}>
-                          <TypeBadge type={m.type} small />
-                          <span style={{ fontSize:"12px", fontWeight:700 }}>{m.name}</span>
-                          {m.bp > 0 && <span style={{ fontSize:"10px", color:"#5a5670", fontFamily:"'JetBrains Mono',monospace" }}>{m.bp}</span>}
-                        </div>
-                      );
-                    })}
+                  <div style={{ display:"flex", gap:"5px", marginBottom:"12px", flexWrap:"wrap" }}>
+                    {c.recMoves.map((m, j) => (
+                      <div key={j} style={{ display:"flex", alignItems:"center", gap:"4px", padding:"4px 10px", borderRadius:"8px", background:`${TC[m.type]}0a`, border:`1px solid ${TC[m.type]}18` }}>
+                        <TypeBadge type={m.type} small />
+                        <span style={{ fontSize:"11px", fontWeight:700 }}>{m.name}</span>
+                        {m.bp > 0 && <span style={{ fontSize:"10px", color:"#666" }}>{m.bp}</span>}
+                      </div>
+                    ))}
                   </div>
 
                   {/* Score bars */}
@@ -795,9 +950,9 @@ function App() {
                   </div>
 
                   {/* Best move & stats */}
-                  <div style={{ display:"flex", gap:"16px", marginTop:"10px", fontSize:"11px", flexWrap:"wrap", fontFamily:"'JetBrains Mono',monospace" }}>
-                    <span style={{color:"#4a4660"}}>Best: <span style={{ color: c.score.bestMovePower >= 300 ? "#fbbf24" : c.score.bestMovePower >= 200 ? "#f97316" : "#6a6580", fontWeight:700 }}>{c.score.bestMoveName} ({c.score.bestMovePower})</span></span>
-                    <span style={{color:"#4a4660"}}>Stats: <span style={{color:"#5a5670"}}>{c.hp}/{c.atk}/{c.def}/{c.spa}/{c.spd}/{c.spe}</span></span>
+                  <div style={{ display:"flex", gap:"16px", marginTop:"8px", fontSize:"11px", flexWrap:"wrap", color:"#555" }}>
+                    <span>Best: <span style={{ color: c.score.bestMovePower >= 300 ? "#fbbf24" : c.score.bestMovePower >= 200 ? "#f97316" : "#999", fontWeight:700 }}>{c.score.bestMoveName} ({c.score.bestMovePower})</span></span>
+                    <span>Stats: <span style={{color:"#777"}}>{c.hp}/{c.atk}/{c.def}/{c.spa}/{c.spd}/{c.spe}</span></span>
                   </div>
                 </div>
               );
@@ -806,10 +961,10 @@ function App() {
         )}
 
         {/* Footer */}
-        <div style={{ marginTop:"32px", textAlign:"center", fontSize:"10px", color:"#1e1d30", paddingTop:"16px", borderTop:"1px solid rgba(255,255,255,0.02)", lineHeight:2, fontFamily:"'JetBrains Mono',monospace" }}>
-          Offense: BP × STAB × Effectiveness × BossDef targeting · Sustain: Leech Seed(5) › Recover(4) › Rest(2) + drain by matchup
+        <div style={{ marginTop:"32px", textAlign:"center", fontSize:"10px", color:"#2a2936", paddingTop:"16px", borderTop:"1px solid rgba(255,255,255,0.03)", lineHeight:1.8 }}>
+          Offense: BP × STAB × Effectiveness × Boss Def/SpDef targeting · Sustain: Leech Seed(5) &gt; Recover(4) &gt; Rest(2) + drain by matchup
           <br/>Solo: Offense ×4 + Power ×3 · Group: Sustain ×1.2 + Bulk ×1.5 · Full immunity: +25
-          <br/>Boss moves: last 4 reliable attacking moves (acc≥90) · Data: Pokémon Showdown · Gen 9→8→7 Cobblemon fallback
+          <br/>Data: Pokémon Showdown · Gen 9→8→7 fallback for Cobblemon · Boss moves: last 4 reliable (acc≥90) attacking moves
         </div>
       </div>
     </div>
