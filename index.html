@@ -378,7 +378,9 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
 
   // SUSTAIN
   let sustainScore = 0;
-  if (c.hasLeechSeed) sustainScore += 5;
+  // Grass types are immune to Leech Seed — check boss base types AND Tera type
+  const bossIsGrass = bossTypes.includes("Grass") || teraType === "Grass";
+  if (c.hasLeechSeed && !bossIsGrass) sustainScore += 5;
   if (c.hasReliableRecovery) sustainScore += 4;
   else if (c.hasRest) sustainScore += 2;
   // Drain moves scored by matchup
@@ -502,8 +504,9 @@ function recommendMoves(counter, bossTypes, teraType) {
     moves.push({ ...coverageMoves[0], slot: "coverage" });
   }
 
-  // 4. Sustain move
-  if (counter.hasLeechSeed) {
+  // 4. Sustain move — Leech Seed fails against Grass types
+  const bossIsGrass = bossTypes.includes("Grass") || teraType === "Grass";
+  if (counter.hasLeechSeed && !bossIsGrass) {
     const ls = counter.allMoves.find(m => m.id === "leechseed");
     if (ls) moves.push({ ...ls, slot: "sustain" });
   } else if (counter.hasReliableRecovery) {
