@@ -651,24 +651,22 @@ function recommendMoves(counter, bossTypes, teraType) {
     }
   }
 
-  // 2. Best STAB attacking move
+  // Sustained DPS helper — same formula used for attackMoves sort
+  const sustainedDps = (m, eff) => {
+    const penalty = m.hasPenalty ? 0.5 : 1.0;
+    return m.bp * (m.acc / 100) * Math.min(m.pp / 5, 1.2) * penalty * eff;
+  };
+
+  // 2. Best STAB attacking move — by sustained DPS, not raw BP
   const stabAttacks = counter.attackMoves
     .filter(m => counter.stab.includes(m.type))
-    .sort((a, b) => {
-      const aEff = a.bp * getEff(a.type, effTypes) * 1.5;
-      const bEff = b.bp * getEff(b.type, effTypes) * 1.5;
-      return bEff - aEff;
-    });
+    .sort((a, b) => sustainedDps(b, getEff(b.type, effTypes) * 1.5) - sustainedDps(a, getEff(a.type, effTypes) * 1.5));
   if (stabAttacks[0]) moves.push({ ...stabAttacks[0], slot: "stab" });
 
-  // 3. Best coverage move (different type from STAB, SE preferred)
+  // 3. Best coverage move — by sustained DPS, prefer SE
   const coverageMoves = counter.attackMoves
     .filter(m => !counter.stab.includes(m.type))
-    .sort((a, b) => {
-      const aEff = a.bp * getEff(a.type, effTypes);
-      const bEff = b.bp * getEff(b.type, effTypes);
-      return bEff - aEff;
-    });
+    .sort((a, b) => sustainedDps(b, getEff(b.type, effTypes)) - sustainedDps(a, getEff(a.type, effTypes)));
   if (coverageMoves[0] && getEff(coverageMoves[0].type, effTypes) >= 2) {
     moves.push({ ...coverageMoves[0], slot: "coverage" });
   } else if (stabAttacks[1] && !moves.find(m => m.id === stabAttacks[1].id)) {
@@ -993,7 +991,7 @@ function App() {
       <div style={{ background:"linear-gradient(180deg, #161520 0%, #0f0e13 100%)", borderBottom:"1px solid rgba(86,171,47,0.15)", padding:"24px 16px 20px", textAlign:"center" }}>
         <h1 style={{ fontSize:"36px", fontWeight:900, letterSpacing:"6px", margin:0, fontFamily:"'Rajdhani',sans-serif", background:"linear-gradient(135deg, #56ab2f, #a8e063)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>COBBLEVERSE</h1>
         <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#4a4858", marginTop:"2px", fontWeight:600 }}>RAID COUNTER ANALYZER</div>
-        <div style={{ fontSize:"10px", color:"#2e2d38", marginTop:"4px" }}>{pokemonNames.length} Pokémon · {Object.keys(data.moves).length} Moves · <span style={{color:"#3a3850"}}>v0.4.0</span></div>
+        <div style={{ fontSize:"10px", color:"#2e2d38", marginTop:"4px" }}>{pokemonNames.length} Pokémon · {Object.keys(data.moves).length} Moves · <span style={{color:"#3a3850"}}>v0.4.1</span></div>
       </div>
 
       <div style={{ maxWidth:"920px", margin:"0 auto", padding:"20px 16px" }}>
