@@ -1,30 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cobbleverse Raid Counter Analyzer</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0f0e17; background-image: radial-gradient(ellipse at 20% 0%, rgba(86,171,47,0.06) 0%, transparent 50%), radial-gradient(ellipse at 80% 100%, rgba(99,144,240,0.04) 0%, transparent 50%); min-height: 100vh; }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #2a2936; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #56ab2f; }
-    input::placeholder { color: #3a3850; }
-    @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-    .card-hover:hover { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important; }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="text/babel">
-    const { useState, useMemo, useEffect } = React;
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cobbleverse Raid Counter Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0f0e17;background-image:radial-gradient(ellipse at 20% 0%,rgba(86,171,47,.06) 0%,transparent 50%),radial-gradient(ellipse at 80% 100%,rgba(99,144,240,.04) 0%,transparent 50%);min-height:100vh}::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#2a2936;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#56ab2f}input::placeholder{color:#3a3850}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.card-hover:hover{transform:translateY(-1px);box-shadow:0 8px 32px rgba(0,0,0,.4)!important}</style>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo, useEffect } = React;
 
 
 // ─── TYPE CHART ───
@@ -137,8 +123,19 @@ function buildCounter(pid, pokemon, movesDB, learnset, abilitiesDB, tagsDB) {
   const hasSS = availableMoves.some(m => m.id === "shellsmash");
   const hasNP = availableMoves.some(m => m.id === "nastyplot");
 
-  // Determine if physical or special attacker based on stats
-  const isPhysical = p.atk > p.spa;
+  // Determine if physical or special attacker
+  // Consider stats AND available setup moves — a mon with SD/DD but no CM/NP is physical
+  let isPhysical;
+  if (p.atk > p.spa * 1.2) isPhysical = true; // clearly physical
+  else if (p.spa > p.atk * 1.2) isPhysical = false; // clearly special
+  else {
+    // Stats are close — check what setup moves it has to break the tie
+    const hasPhysSetup = hasSD || hasDD || hasBU;
+    const hasSpecSetup = hasCM || hasNP;
+    if (hasPhysSetup && !hasSpecSetup) isPhysical = true;
+    else if (hasSpecSetup && !hasPhysSetup) isPhysical = false;
+    else isPhysical = p.atk >= p.spa; // true tie: default to physical
+  }
   let setupType = "none";
   if (hasQD) setupType = "qd";
   else if (hasSS) setupType = "ss";
@@ -287,12 +284,25 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
   //   CM/BU: +1 per use → 6 turns to +6 → 4x damage (slow, but also boosts defense)
   //   QD/SS: QD +1 to 3 stats per use, SS +2 to offense but -1 def
   //   None: 1x damage forever = basically can't kill in 6-7★
-  let setupDmgMult = 1.0; // effective multiplier over a full raid fight
-  if (["sd","np","dd"].includes(c.setupType)) setupDmgMult = 3.5; // fast +6, most of fight at 4x
-  else if (["cm","bu"].includes(c.setupType)) setupDmgMult = 2.8; // slower +6 but gets there
-  else if (c.setupType === "qd") setupDmgMult = 3.0; // +1 SpA per turn, efficient
-  else if (c.setupType === "ss") setupDmgMult = 3.5; // +2 fast but fragile
-  else setupDmgMult = 1.0; // no setup = base damage only
+  let setupDmgMult = 1.0;
+  // CRITICAL: setup only boosts damage if it matches the attacker's category
+  // BU/SD/DD boost Atk → only helps physical attackers
+  // CM/NP boost SpA → only helps special attackers
+  // If mismatch (e.g. Bulk Up on a SpA user), setup gives 0 offense boost
+  const physSetup = ["sd","bu","dd"].includes(c.setupType);
+  const specSetup = ["cm","np"].includes(c.setupType);
+  const setupMatchesAttacker = (physSetup && c.isPhysical) || (specSetup && !c.isPhysical);
+
+  if (setupMatchesAttacker) {
+    if (["sd","np","dd"].includes(c.setupType)) setupDmgMult = 3.5;
+    else if (["cm","bu"].includes(c.setupType)) setupDmgMult = 2.8;
+  } else if (c.setupType === "qd") {
+    setupDmgMult = 3.0; // QD always boosts SpA, and QD users are always special
+  } else if (c.setupType === "ss") {
+    setupDmgMult = 3.5; // Shell Smash boosts both Atk and SpA
+  } else {
+    setupDmgMult = 1.0; // no setup OR mismatched setup = no offense boost
+  }
 
   topMoves.sort((a, b) => b.power - a.power);
   let totalThroughput = 0;
@@ -585,7 +595,7 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
     sustain: sustainScore, abilityHeal: abilityHealBonus, bulk: bulkScore,
     immunity: immunityBonus, bestMovePower: Math.round(bestMovePower),
     bestMoveName, defMult: worstEff, hasStabSE: bestStabSE, rawDmgBonus, fullImmune, walledBy, debuffPenalty,
-    killPotential: Math.round(killPotential * 100), totalThroughput: Math.round(totalThroughput), bestMovePP, setupDmgMult, hasSE,
+    killPotential: Math.round(killPotential * 100), totalThroughput: Math.round(totalThroughput), bestMovePP, setupDmgMult, hasSE, setupMismatch: c.setupType !== "none" && !setupMatchesAttacker && c.setupType !== "qd" && c.setupType !== "ss",
     turnsToSurvive, survivalPct: Math.round(survivalMult * 100),
   };
 }
@@ -956,7 +966,7 @@ function App() {
       <div style={{ background:"linear-gradient(180deg, #161520 0%, #0f0e13 100%)", borderBottom:"1px solid rgba(86,171,47,0.15)", padding:"24px 16px 20px", textAlign:"center" }}>
         <h1 style={{ fontSize:"36px", fontWeight:900, letterSpacing:"6px", margin:0, fontFamily:"'Rajdhani',sans-serif", background:"linear-gradient(135deg, #56ab2f, #a8e063)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>COBBLEVERSE</h1>
         <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#4a4858", marginTop:"2px", fontWeight:600 }}>RAID COUNTER ANALYZER</div>
-        <div style={{ fontSize:"10px", color:"#2e2d38", marginTop:"4px" }}>{pokemonNames.length} Pokémon · {Object.keys(data.moves).length} Moves · <span style={{color:"#3a3850"}}>v0.3.1</span></div>
+        <div style={{ fontSize:"10px", color:"#2e2d38", marginTop:"4px" }}>{pokemonNames.length} Pokémon · {Object.keys(data.moves).length} Moves · <span style={{color:"#3a3850"}}>v0.3.2</span></div>
       </div>
 
       <div style={{ maxWidth:"920px", margin:"0 auto", padding:"20px 16px" }}>
@@ -1407,7 +1417,8 @@ function App() {
                   <div style={{ display:"flex", gap:"16px", marginTop:"8px", fontSize:"11px", flexWrap:"wrap", color:"#555" }}>
                     <span>Best: <span style={{ color: c.score.bestMovePower >= 300 ? "#fbbf24" : c.score.bestMovePower >= 200 ? "#f97316" : "#999", fontWeight:700 }}>{c.score.bestMoveName} ({c.score.bestMovePower} pwr × {c.score.bestMovePP}pp)</span></span>
                     {c.score.setupDmgMult > 1 && <span style={{ color:"#a78bfa" }}>×{c.score.setupDmgMult} setup</span>}
-                    {c.score.setupDmgMult <= 1 && <span style={{ color:"#ef4444", fontWeight:700 }}>⚠ No setup</span>}
+                    {c.score.setupMismatch && <span style={{ color:"#f97316", fontWeight:700 }}>⚠ Setup doesn't boost {c.isPhysical ? "Atk" : "SpA"}</span>}
+                    {c.score.setupDmgMult <= 1 && !c.score.setupMismatch && <span style={{ color:"#ef4444", fontWeight:700 }}>⚠ No offense setup</span>}
                     {!c.score.hasSE && <span style={{ color:"#ef4444", fontWeight:700 }}>⚠ No SE</span>}
                     {c.score.killPotential < 100 && <span style={{ color: c.score.killPotential < 50 ? "#ef4444" : "#f97316", fontWeight:700 }}>Kill: {c.score.killPotential}%</span>}
                     {c.score.survivalPct < 100 && <span style={{ color: c.score.turnsToSurvive <= 2 ? "#ef4444" : "#f97316", fontWeight:700 }}>~{c.score.turnsToSurvive} turns alive</span>}
@@ -1430,8 +1441,6 @@ function App() {
   );
 }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(React.createElement(App));
-  </script>
-</body>
-</html>
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(React.createElement(App));
+</script></body></html>
