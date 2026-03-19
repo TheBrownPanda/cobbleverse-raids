@@ -280,22 +280,51 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
     if (isSTAB && eff >= 2) bestStabSE = true;
   }
 
-  // KILL POTENTIAL: can this Pokemon actually kill the boss before running out of PP?
-  // Total damage = sum of (power × PP) for top moves, weighted by best-first usage
+  // KILL POTENTIAL: factors setup multiplier + move power + PP
+  // Pokemon stat stage multipliers: +1=1.5x, +2=2x, +3=2.5x, +4=3x, +5=3.5x, +6=4x
+  // Setup moves and how fast they reach +6:
+  //   SD/NP/DD: +2 per use → 3 turns to +6 → 4x damage (fast, pure offense)
+  //   CM/BU: +1 per use → 6 turns to +6 → 4x damage (slow, but also boosts defense)
+  //   QD/SS: QD +1 to 3 stats per use, SS +2 to offense but -1 def
+  //   None: 1x damage forever = basically can't kill in 6-7★
+  let setupDmgMult = 1.0; // effective multiplier over a full raid fight
+  if (["sd","np","dd"].includes(c.setupType)) setupDmgMult = 3.5; // fast +6, most of fight at 4x
+  else if (["cm","bu"].includes(c.setupType)) setupDmgMult = 2.8; // slower +6 but gets there
+  else if (c.setupType === "qd") setupDmgMult = 3.0; // +1 SpA per turn, efficient
+  else if (c.setupType === "ss") setupDmgMult = 3.5; // +2 fast but fragile
+  else setupDmgMult = 1.0; // no setup = base damage only
+
   topMoves.sort((a, b) => b.power - a.power);
   let totalThroughput = 0;
   for (let i = 0; i < Math.min(topMoves.length, 3); i++) {
     totalThroughput += topMoves[i].power * topMoves[i].pp;
   }
-  // Normalize: 3000+ throughput = full kill potential (1.0x), below = penalized
-  // Example: Flamethrower STAB SE (270pwr × 24pp) = 6480 → great
-  // Example: Glacial Lance neutral (135pwr × 8pp) = 1080 → very bad
-  // Example: Glacial Lance SE (270pwr × 8pp) + Ice Beam SE (270pwr × 16pp) = 6480 → great (has backup)
-  let killPotential = Math.min(1.0, totalThroughput / 3000);
-  // Harsh penalty for very low throughput (can't kill at all)
-  if (totalThroughput < 1000) killPotential *= 0.5;
-  // Bonus for high throughput (lots of PP + power)
-  if (totalThroughput > 5000) killPotential = 1.0;
+  // Apply setup multiplier to throughput — this is the REAL damage you'll deal
+  totalThroughput *= setupDmgMult;
+
+  // Check if we have any SE move at all
+  const hasSE = topMoves.some(m => {
+    const eff = getEff(m.type, effTypes);
+    return eff >= 2;
+  });
+
+  // Kill potential thresholds (scaled for 6★ raid boss HP ~15000-20000 effective)
+  // With setup: Flamethrower STAB SE = 270pwr × 24pp × 3.5 setup = 22,680 → easy kill
+  // Without setup: Flamethrower STAB SE = 270pwr × 24pp × 1.0 = 6,480 → barely possible
+  // Without SE: Flamethrower STAB neutral = 135pwr × 24pp × 3.5 = 11,340 → struggles
+  // Without SE or setup: 135pwr × 24pp × 1.0 = 3,240 → impossible
+  let killPotential;
+  if (totalThroughput >= 12000) killPotential = 1.0;
+  else if (totalThroughput >= 8000) killPotential = 0.9;
+  else if (totalThroughput >= 5000) killPotential = 0.7;
+  else if (totalThroughput >= 3000) killPotential = 0.5;
+  else if (totalThroughput >= 1500) killPotential = 0.3;
+  else killPotential = 0.15; // basically can't kill
+
+  // Extra penalty: no setup AND no SE = completely unviable
+  if (setupDmgMult <= 1.0 && !hasSE) killPotential *= 0.3;
+  // No setup but has SE = possible but very hard
+  else if (setupDmgMult <= 1.0) killPotential *= 0.6;
 
   // Check if any boss ability could wall our best move
   let walledBy = null;
@@ -325,10 +354,10 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
     }
   }
 
-  // Continuous offense score — scales smoothly, no cap
-  // Use safe move power (not walled by any possible boss ability) for scoring
-  // but report both so the UI can show the risk
-  let offScore = Math.round(Math.min(20, Math.sqrt(safeMovePower) * 0.63) * 10) / 10;
+  // Continuous offense score — includes setup multiplier for real damage output
+  // Raw move power shows base quality, but setup is what makes it lethal
+  const effectivePower = safeMovePower * setupDmgMult;
+  let offScore = Math.round(Math.min(20, Math.sqrt(effectivePower) * 0.63) * 10) / 10;
 
   // BASE STAT SCALING
   let rawDmgBonus = 0;
@@ -392,11 +421,16 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
     if (c.abilityInfo.statDropImmune) debuffPenalty = 0;
   }
 
-  // SETUP
+  // SETUP — now mainly scores the DEFENSIVE benefit since offense boost is in offense score
+  // CM/BU give +SpDef/+Def which is huge for surviving
+  // SD/NP are pure offense (already in offense score), minimal extra setup score
   let setupScore = 0;
-  if (c.setupType === "qd" || c.setupType === "ss") setupScore = 7;
-  else if (["cm","np"].includes(c.setupType)) setupScore = bossStyle === "special" ? 7 : bossStyle === "physical" ? 3 : 5;
-  else if (["bu","sd","dd"].includes(c.setupType)) setupScore = bossStyle === "physical" ? 7 : bossStyle === "special" ? 3 : 5;
+  if (c.setupType === "qd") setupScore = 5; // +SpDef + SpA + Spe, great all-around
+  else if (c.setupType === "ss") setupScore = 2; // drops defenses
+  else if (c.setupType === "cm") setupScore = bossStyle === "special" ? 6 : 3; // +SpDef is huge vs special
+  else if (c.setupType === "bu") setupScore = bossStyle === "physical" ? 6 : 3; // +Def is huge vs physical
+  else if (["sd","np","dd"].includes(c.setupType)) setupScore = 2; // pure offense, no def boost
+  // No setup = 0, and the kill potential penalty handles the rest
 
   // SUSTAIN
   let sustainScore = 0;
@@ -475,7 +509,7 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
     sustain: sustainScore, abilityHeal: abilityHealBonus, bulk: bulkScore,
     immunity: immunityBonus, bestMovePower: Math.round(bestMovePower),
     bestMoveName, defMult: worstEff, hasStabSE: bestStabSE, rawDmgBonus, fullImmune, walledBy, debuffPenalty,
-    killPotential: Math.round(killPotential * 100), totalThroughput: Math.round(totalThroughput), bestMovePP,
+    killPotential: Math.round(killPotential * 100), totalThroughput: Math.round(totalThroughput), bestMovePP, setupDmgMult, hasSE,
   };
 }
 
@@ -845,7 +879,7 @@ function App() {
       <div style={{ background:"linear-gradient(180deg, #161520 0%, #0f0e13 100%)", borderBottom:"1px solid rgba(86,171,47,0.15)", padding:"24px 16px 20px", textAlign:"center" }}>
         <h1 style={{ fontSize:"36px", fontWeight:900, letterSpacing:"6px", margin:0, fontFamily:"'Rajdhani',sans-serif", background:"linear-gradient(135deg, #56ab2f, #a8e063)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>COBBLEVERSE</h1>
         <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#4a4858", marginTop:"2px", fontWeight:600 }}>RAID COUNTER ANALYZER</div>
-        <div style={{ fontSize:"10px", color:"#2e2d38", marginTop:"4px" }}>{pokemonNames.length} Pokémon · {Object.keys(data.moves).length} Moves · <span style={{color:"#3a3850"}}>v0.1.0</span></div>
+        <div style={{ fontSize:"10px", color:"#2e2d38", marginTop:"4px" }}>{pokemonNames.length} Pokémon · {Object.keys(data.moves).length} Moves · <span style={{color:"#3a3850"}}>v0.2.0</span></div>
       </div>
 
       <div style={{ maxWidth:"920px", margin:"0 auto", padding:"20px 16px" }}>
@@ -1295,7 +1329,10 @@ function App() {
                   {/* Best move & stats */}
                   <div style={{ display:"flex", gap:"16px", marginTop:"8px", fontSize:"11px", flexWrap:"wrap", color:"#555" }}>
                     <span>Best: <span style={{ color: c.score.bestMovePower >= 300 ? "#fbbf24" : c.score.bestMovePower >= 200 ? "#f97316" : "#999", fontWeight:700 }}>{c.score.bestMoveName} ({c.score.bestMovePower} pwr × {c.score.bestMovePP}pp)</span></span>
-                    {c.score.killPotential < 100 && <span style={{ color:"#ef4444", fontWeight:700 }}>⚠ Kill: {c.score.killPotential}%</span>}
+                    {c.score.setupDmgMult > 1 && <span style={{ color:"#a78bfa" }}>×{c.score.setupDmgMult} setup</span>}
+                    {c.score.setupDmgMult <= 1 && <span style={{ color:"#ef4444", fontWeight:700 }}>⚠ No setup</span>}
+                    {!c.score.hasSE && <span style={{ color:"#ef4444", fontWeight:700 }}>⚠ No SE</span>}
+                    {c.score.killPotential < 100 && <span style={{ color: c.score.killPotential < 50 ? "#ef4444" : "#f97316", fontWeight:700 }}>Kill: {c.score.killPotential}%</span>}
                     <span>Stats: <span style={{color:"#777"}}>{c.hp}/{c.atk}/{c.def}/{c.spa}/{c.spd}/{c.spe}</span></span>
                   </div>
                 </div>
