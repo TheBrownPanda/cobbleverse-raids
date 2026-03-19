@@ -243,7 +243,7 @@ function buildCounter(pid, pokemon, movesDB, learnset, abilitiesDB, tagsDB) {
 }
 
 // ─── SCORING ENGINE ───
-function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bossStats, bossAbilities, bossDebuffs) {
+function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bossStats, bossAbilities, bossDebuffs, starLevel) {
   if (!c) return { total: 0 };
   const effTypes = teraType ? [teraType] : bossTypes;
   const bossAtkTypes = bossMoves
@@ -299,34 +299,110 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
   for (let i = 0; i < Math.min(topMoves.length, 3); i++) {
     totalThroughput += topMoves[i].power * topMoves[i].pp;
   }
-  // Apply setup multiplier to throughput — this is the REAL damage you'll deal
   totalThroughput *= setupDmgMult;
 
-  // Check if we have any SE move at all
-  const hasSE = topMoves.some(m => {
-    const eff = getEff(m.type, effTypes);
-    return eff >= 2;
-  });
+  // Check if we have any SE move — this is THE critical factor
+  // Without SE, neutral hits do half damage and you simply run out of PP
+  const hasSE = c.attackMoves.some(m => getEff(m.type, effTypes) >= 2);
+  // Also check best SE throughput specifically (not just any SE exists)
+  let seThroughput = 0;
+  for (const m of topMoves) {
+    if (getEff(m.type, effTypes) >= 2) {
+      seThroughput += m.power * m.pp;
+    }
+  }
+  seThroughput *= setupDmgMult;
 
-  // Kill potential thresholds (scaled for 6★ raid boss HP ~15000-20000 effective)
-  // With setup: Flamethrower STAB SE = 270pwr × 24pp × 3.5 setup = 22,680 → easy kill
-  // Without setup: Flamethrower STAB SE = 270pwr × 24pp × 1.0 = 6,480 → barely possible
-  // Without SE: Flamethrower STAB neutral = 135pwr × 24pp × 3.5 = 11,340 → struggles
-  // Without SE or setup: 135pwr × 24pp × 1.0 = 3,240 → impossible
+  // Kill potential — based on whether you can actually finish the boss
+  // 6★ raid bosses have ~20x normal HP. You NEED SE + setup to kill them.
   let killPotential;
-  if (totalThroughput >= 12000) killPotential = 1.0;
-  else if (totalThroughput >= 8000) killPotential = 0.9;
-  else if (totalThroughput >= 5000) killPotential = 0.7;
-  else if (totalThroughput >= 3000) killPotential = 0.5;
-  else if (totalThroughput >= 1500) killPotential = 0.3;
-  else killPotential = 0.15; // basically can't kill
+  if (hasSE) {
+    // Has SE move — use SE throughput (the damage that actually matters)
+    if (seThroughput >= 8000) killPotential = 1.0;
+    else if (seThroughput >= 5000) killPotential = 0.85;
+    else if (seThroughput >= 3000) killPotential = 0.7;
+    else if (seThroughput >= 1500) killPotential = 0.5;
+    else killPotential = 0.35;
+    // No setup with SE = can still contribute but struggles
+    if (setupDmgMult <= 1.0) killPotential *= 0.5;
+  } else {
+    // NO SE move — neutral damage only. In 6★+ this is almost always unviable.
+    // Even with +6 Swords Dance, neutral STAB 120BP × 8pp = not enough
+    // Hard cap: max 35% kill potential without SE (tanky sustain won't save you if you can't kill)
+    killPotential = Math.min(0.35, totalThroughput / 30000);
+    // No setup AND no SE = completely unviable
+    if (setupDmgMult <= 1.0) killPotential = Math.min(0.1, killPotential);
+  }
 
-  // Extra penalty: no setup AND no SE = completely unviable
-  if (setupDmgMult <= 1.0 && !hasSE) killPotential *= 0.3;
-  // No setup but has SE = possible but very hard
-  else if (setupDmgMult <= 1.0) killPotential *= 0.6;
+  // ═══ SURVIVAL ESTIMATION ═══
+  // Estimate how many turns the counter survives based on boss's ACTUAL moves
+  // This catches: Delphox (Fire) dying in 1 hit to Dondozo's Water moves
+  const bossAtk = bossStats?.atk || 100;
+  const bossSpA = bossStats?.spa || 100;
+  const bossLevel = starLevel >= 7 ? 100 : starLevel >= 6 ? 90 : 75;
+  // Counter's effective HP at ~Lv100 (base × 2 + 141 for 31 IV + some EV)
+  const counterHP = Math.floor(c.hp * 2 + 141);
+  
+  let worstBossDmg = 0;
+  const bossMoveList = bossMoves || [];
+  for (const bm of bossMoveList) {
+    if (bm.bp <= 0) continue;
+    const bmAtk = bm.cat === "P" ? bossAtk : bossSpA;
+    const bmDef = bm.cat === "P" ? c.def : c.spd;
+    // Actual defense stat at ~Lv100
+    const counterDef = Math.floor(bmDef * 2 + 36); // 31 IV, 0 EV
+    let bmEff = getEff(bm.type, c.types);
+    if (c.abilityInfo.typeImmune === bm.type) bmEff = 0;
+    // Simplified damage formula
+    const dmg = Math.floor(((2 * bossLevel / 5 + 2) * bm.bp * bmAtk / counterDef / 50 + 2) * bmEff);
+    if (dmg > worstBossDmg) worstBossDmg = dmg;
+  }
+  
+  // Estimate turns to survive (including ALL sustain healing - sources STACK)
+  let healPerTurn = 0;
+  if (!fullImmune) {
+    // Passive healing (every turn, no action cost)
+    if (c.hasLeechSeed) healPerTurn += counterHP * 0.125; // 12.5%/turn, passive
+    if (c.itemHeal > 0) healPerTurn += counterHP * (c.itemHeal / 100); // Leftovers 6.25%, Black Sludge 6.25%
+    if (c.abilityInfo.passiveHeal >= 12) healPerTurn += counterHP * 0.125; // Poison Heal 12.5%/turn
+    else if (c.abilityInfo.passiveHeal >= 6) healPerTurn += counterHP * 0.0625; // Rain Dish/Ice Body/Grassy Surge
 
-  // Check if any boss ability could wall our best move
+    // Active healing (costs a turn, so effective rate is halved since you alternate attack/heal)
+    if (c.hasReliableRecovery) healPerTurn += counterHP * 0.20; // Recover/Roost 50% but costs 1 of every ~2.5 turns
+    else if (c.hasRest) healPerTurn += counterHP * 0.12; // Full heal but 2 turns asleep, ~12%/turn effective
+
+    // Drain moves — only count if they do real damage in this matchup
+    for (const dm of c.hasDrain) {
+      const eff = getEff(dm.type, effTypes);
+      const isSTAB = c.stab.includes(dm.type);
+      if (isSTAB && eff >= 2) { healPerTurn += counterHP * 0.08; break; } // STAB SE drain heals a lot
+      else if (eff >= 2 || isSTAB) { healPerTurn += counterHP * 0.04; break; } // decent drain
+    }
+  }
+  
+  // Setup defensive boost: CM/BU reduce damage taken over time
+  // After 3 turns of CM vs special boss: +3 SpDef ≈ take 60% damage
+  // After 3 turns of BU vs physical boss: +3 Def ≈ take 60% damage
+  let defSetupReduction = 1.0;
+  if (c.setupType === "cm" && bossStyle !== "physical") defSetupReduction = 0.65;
+  else if (c.setupType === "bu" && bossStyle !== "special") defSetupReduction = 0.65;
+  else if (c.setupType === "qd") defSetupReduction = 0.75;
+  
+  const effectiveBossDmg = worstBossDmg * defSetupReduction;
+  const netDmgPerTurn = Math.max(0, effectiveBossDmg - healPerTurn);
+  const turnsToSurvive = netDmgPerTurn > 0 ? Math.max(1, Math.floor(counterHP / netDmgPerTurn)) : 99;
+  
+  // Turns needed to set up + kill
+  const turnsToSetup = ["sd","np","dd","ss"].includes(c.setupType) ? 3 : ["cm","bu"].includes(c.setupType) ? 4 : c.setupType === "qd" ? 3 : 0;
+  const turnsNeeded = turnsToSetup + (hasSE ? 6 : 12); // SE kills faster
+  
+  // Survival multiplier: if you die before you can contribute, score is crushed
+  let survivalMult = 1.0;
+  if (turnsToSurvive <= 1) survivalMult = 0.1; // dies immediately
+  else if (turnsToSurvive <= 2) survivalMult = 0.2;
+  else if (turnsToSurvive <= turnsToSetup) survivalMult = 0.25; // dies during setup
+  else if (turnsToSurvive < turnsNeeded) survivalMult = Math.max(0.3, turnsToSurvive / turnsNeeded);
+  // Else: survives long enough → 1.0
   let walledBy = null;
   let safeMovePower = bestMovePower;
   let safeMoveName = bestMoveName;
@@ -500,8 +576,8 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
     ((defScore + abilityDefBonus) * wDef) + (setupScore * wSetup) +
     ((sustainScore + abilityHealBonus) * wSustain) + (bulkScore * wBulk) + immunityBonus - debuffPenalty;
 
-  // Apply kill potential — tanky walls with no damage get crushed, glass cannons with SE stay high
-  const total = rawTotal * killPotential;
+  // Apply kill potential AND survival — both must be viable to rank high
+  const total = rawTotal * killPotential * survivalMult;
 
   return {
     total: Math.round(total * 10) / 10, offense: offScore, abilityOff: abilityOffBonus,
@@ -510,6 +586,8 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
     immunity: immunityBonus, bestMovePower: Math.round(bestMovePower),
     bestMoveName, defMult: worstEff, hasStabSE: bestStabSE, rawDmgBonus, fullImmune, walledBy, debuffPenalty,
     killPotential: Math.round(killPotential * 100), totalThroughput: Math.round(totalThroughput), bestMovePP, setupDmgMult, hasSE,
+    turnsToSurvive, survivalPct: Math.round(survivalMult * 100),
+  };
   };
 }
 
@@ -819,13 +897,13 @@ function App() {
       if (!learnset) continue;
       const counter = buildCounter(pid, data.pokemon, data.moves, learnset, data.abilities, data.tags);
       if (!counter || counter.attackMoves.length === 0) continue;
-      const score = scoreCounter(counter, bossTypes, teraType || null, bossStyle, raidMode, bossMoveset, bossStats, bossAbilities, bossDebuffs);
+      const score = scoreCounter(counter, bossTypes, teraType || null, bossStyle, raidMode, bossMoveset, bossStats, bossAbilities, bossDebuffs, starLevel);
       if (score.total <= 0) continue;
       const rec = recommendMoves(counter, bossTypes, teraType || null);
       counters.push({ ...counter, score, recMoves: rec.moves, setupOptions: rec.setupOptions });
     }
     return counters.sort((a, b) => b.score.total - a.score.total).slice(0, 50);
-  }, [data, bossTypes, teraType, bossStyle, raidMode, bossMoveset, bossStats, bossAbilities, bossDebuffs]);
+  }, [data, bossTypes, teraType, bossStyle, raidMode, bossMoveset, bossStats, bossAbilities, bossDebuffs, starLevel]);
 
   const myFilteredSearch = useMemo(() => {
     if (!mySearch || mySearch.length < 1 || !pokemonNames) return [];
@@ -843,7 +921,7 @@ function App() {
       if (!learnset) continue;
       const counter = buildCounter(pid, data.pokemon, data.moves, learnset, data.abilities, data.tags);
       if (!counter || counter.attackMoves.length === 0) continue;
-      const score = scoreCounter(counter, bossTypes, teraType || null, bossStyle, raidMode, bossMoveset, bossStats, bossAbilities, bossDebuffs);
+      const score = scoreCounter(counter, bossTypes, teraType || null, bossStyle, raidMode, bossMoveset, bossStats, bossAbilities, bossDebuffs, starLevel);
       const rec = recommendMoves(counter, bossTypes, teraType || null);
       counters.push({ ...counter, score, recMoves: rec.moves, setupOptions: rec.setupOptions });
     }
@@ -879,7 +957,7 @@ function App() {
       <div style={{ background:"linear-gradient(180deg, #161520 0%, #0f0e13 100%)", borderBottom:"1px solid rgba(86,171,47,0.15)", padding:"24px 16px 20px", textAlign:"center" }}>
         <h1 style={{ fontSize:"36px", fontWeight:900, letterSpacing:"6px", margin:0, fontFamily:"'Rajdhani',sans-serif", background:"linear-gradient(135deg, #56ab2f, #a8e063)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>COBBLEVERSE</h1>
         <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#4a4858", marginTop:"2px", fontWeight:600 }}>RAID COUNTER ANALYZER</div>
-        <div style={{ fontSize:"10px", color:"#2e2d38", marginTop:"4px" }}>{pokemonNames.length} Pokémon · {Object.keys(data.moves).length} Moves · <span style={{color:"#3a3850"}}>v0.2.0</span></div>
+        <div style={{ fontSize:"10px", color:"#2e2d38", marginTop:"4px" }}>{pokemonNames.length} Pokémon · {Object.keys(data.moves).length} Moves · <span style={{color:"#3a3850"}}>v0.3.1</span></div>
       </div>
 
       <div style={{ maxWidth:"920px", margin:"0 auto", padding:"20px 16px" }}>
@@ -1333,6 +1411,7 @@ function App() {
                     {c.score.setupDmgMult <= 1 && <span style={{ color:"#ef4444", fontWeight:700 }}>⚠ No setup</span>}
                     {!c.score.hasSE && <span style={{ color:"#ef4444", fontWeight:700 }}>⚠ No SE</span>}
                     {c.score.killPotential < 100 && <span style={{ color: c.score.killPotential < 50 ? "#ef4444" : "#f97316", fontWeight:700 }}>Kill: {c.score.killPotential}%</span>}
+                    {c.score.survivalPct < 100 && <span style={{ color: c.score.turnsToSurvive <= 2 ? "#ef4444" : "#f97316", fontWeight:700 }}>~{c.score.turnsToSurvive} turns alive</span>}
                     <span>Stats: <span style={{color:"#777"}}>{c.hp}/{c.atk}/{c.def}/{c.spa}/{c.spd}/{c.spe}</span></span>
                   </div>
                 </div>
