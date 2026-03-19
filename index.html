@@ -258,7 +258,10 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
   let bestMovePower = 0;
   let bestMoveName = "";
   let bestMoveType = "";
+  let bestMovePP = 0;
   let bestStabSE = false;
+  // Track top 2 moves for total throughput calc
+  let topMoves = [];
   for (const m of c.attackMoves) {
     const eff = getEff(m.type, effTypes);
     const isSTAB = c.stab.includes(m.type);
@@ -267,13 +270,32 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
     if (c.abilityInfo.punchBoost && m.name.toLowerCase().includes("punch")) bp = Math.floor(bp * 1.2);
     const stabMult = isSTAB ? (c.abilityInfo.adaptability ? 2.0 : 1.5) : 1.0;
     if (c.abilityInfo.contrary && m.id === "leafstorm") bp = Math.floor(bp * 1.8);
-    const accMult = (m.acc || 100) / 100; // Fire Blast 85% = 0.85x
+    const accMult = (m.acc || 100) / 100;
     const targetDef = m.cat === "P" ? bossDef : bossSpDef;
     const defFactor = 100 / Math.max(targetDef, 40);
     const power = bp * stabMult * eff * accMult * defFactor;
-    if (power > bestMovePower) { bestMovePower = power; bestMoveName = m.name; bestMoveType = m.type; }
+    const maxPP = Math.floor((m.pp || 5) * 1.6); // PP Up gives 1.6x
+    topMoves.push({ power, pp: maxPP, name: m.name, type: m.type });
+    if (power > bestMovePower) { bestMovePower = power; bestMoveName = m.name; bestMoveType = m.type; bestMovePP = maxPP; }
     if (isSTAB && eff >= 2) bestStabSE = true;
   }
+
+  // KILL POTENTIAL: can this Pokemon actually kill the boss before running out of PP?
+  // Total damage = sum of (power × PP) for top moves, weighted by best-first usage
+  topMoves.sort((a, b) => b.power - a.power);
+  let totalThroughput = 0;
+  for (let i = 0; i < Math.min(topMoves.length, 3); i++) {
+    totalThroughput += topMoves[i].power * topMoves[i].pp;
+  }
+  // Normalize: 3000+ throughput = full kill potential (1.0x), below = penalized
+  // Example: Flamethrower STAB SE (270pwr × 24pp) = 6480 → great
+  // Example: Glacial Lance neutral (135pwr × 8pp) = 1080 → very bad
+  // Example: Glacial Lance SE (270pwr × 8pp) + Ice Beam SE (270pwr × 16pp) = 6480 → great (has backup)
+  let killPotential = Math.min(1.0, totalThroughput / 3000);
+  // Harsh penalty for very low throughput (can't kill at all)
+  if (totalThroughput < 1000) killPotential *= 0.5;
+  // Bonus for high throughput (lots of PP + power)
+  if (totalThroughput > 5000) killPotential = 1.0;
 
   // Check if any boss ability could wall our best move
   let walledBy = null;
@@ -440,9 +462,12 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
   if (raidMode === "solo") { wOff = 4.0; wDef = 1.5; wSetup = 1.5; wSustain = 0.5; wBulk = 0.8; }
   else { wOff = 2.0; wDef = 2.0; wSetup = 1.5; wSustain = 1.2; wBulk = 1.5; }
 
-  const total = ((offScore + abilityOffBonus) * wOff) + (rawDmgBonus * (raidMode === "solo" ? 3 : 1.5)) +
+  const rawTotal = ((offScore + abilityOffBonus) * wOff) + (rawDmgBonus * (raidMode === "solo" ? 3 : 1.5)) +
     ((defScore + abilityDefBonus) * wDef) + (setupScore * wSetup) +
     ((sustainScore + abilityHealBonus) * wSustain) + (bulkScore * wBulk) + immunityBonus - debuffPenalty;
+
+  // Apply kill potential — tanky walls with no damage get crushed, glass cannons with SE stay high
+  const total = rawTotal * killPotential;
 
   return {
     total: Math.round(total * 10) / 10, offense: offScore, abilityOff: abilityOffBonus,
@@ -450,6 +475,7 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
     sustain: sustainScore, abilityHeal: abilityHealBonus, bulk: bulkScore,
     immunity: immunityBonus, bestMovePower: Math.round(bestMovePower),
     bestMoveName, defMult: worstEff, hasStabSE: bestStabSE, rawDmgBonus, fullImmune, walledBy, debuffPenalty,
+    killPotential: Math.round(killPotential * 100), totalThroughput: Math.round(totalThroughput), bestMovePP,
   };
 }
 
@@ -624,6 +650,30 @@ function App() {
   };
   const removeMyPokemon = (name) => setMyPokemon(prev => prev.filter(n => n !== name));
   const clearMyPokemon = () => { if (confirm("Remove all Pokemon from your box?")) setMyPokemon([]); };
+  const [showShareCode, setShowShareCode] = useState(false);
+  const [importCode, setImportCode] = useState("");
+  const [shareMsg, setShareMsg] = useState("");
+
+  const exportCode = () => {
+    try {
+      const code = btoa(JSON.stringify(myPokemon));
+      navigator.clipboard.writeText(code).then(() => setShareMsg("Copied to clipboard!")).catch(() => setShareMsg("Copy the code above"));
+      setShowShareCode(code);
+      setTimeout(() => setShareMsg(""), 3000);
+    } catch { setShareMsg("Error generating code"); }
+  };
+
+  const importFromCode = () => {
+    try {
+      const decoded = JSON.parse(atob(importCode.trim()));
+      if (Array.isArray(decoded) && decoded.every(n => typeof n === "string")) {
+        setMyPokemon(decoded);
+        setImportCode("");
+        setShareMsg("Imported " + decoded.length + " Pokemon!");
+        setTimeout(() => setShareMsg(""), 3000);
+      } else { setShareMsg("Invalid code format"); }
+    } catch { setShareMsg("Invalid code — check that you copied it fully"); setTimeout(() => setShareMsg(""), 3000); }
+  };
 
   const pokemonNames = useMemo(() => {
     if (!data) return [];
@@ -645,9 +695,43 @@ function App() {
     return [];
   }, [selectedBoss, data, useManual, manualTypes]);
 
-  const bossMoveset = useMemo(() =>
+  const autoBossMoveset = useMemo(() =>
     selectedBoss && data ? getBossMoveset(data.boss, selectedBoss, starLevel) : null,
   [selectedBoss, data, starLevel]);
+
+  const [bossMoveset, setBossMoveset] = useState(null);
+  const [editingSlot, setEditingSlot] = useState(null); // which move slot is being swapped
+  const [moveSearch, setMoveSearch] = useState("");
+
+  // Sync auto moveset when boss or star level changes
+  useEffect(() => {
+    setBossMoveset(autoBossMoveset);
+    setEditingSlot(null);
+  }, [autoBossMoveset]);
+
+  // All moves this boss could know (from its learnset) for manual swapping
+  const bossAllMoves = useMemo(() => {
+    if (!selectedBoss || !data) return [];
+    let pid = null;
+    for (const [id, p] of Object.entries(data.pokemon)) { if (p.name === selectedBoss) { pid = id; break; } }
+    if (!pid || !data.learnsets[pid]) return [];
+    return data.learnsets[pid]
+      .map(mid => data.moves[mid] ? { id: mid, ...data.moves[mid] } : null)
+      .filter(m => m && m.bp > 0)
+      .sort((a, b) => b.bp - a.bp);
+  }, [selectedBoss, data]);
+
+  const swapBossMove = (slotIndex, newMove) => {
+    setBossMoveset(prev => {
+      const updated = [...(prev || [])];
+      updated[slotIndex] = { name: newMove.name, cat: newMove.cat, type: newMove.type, bp: newMove.bp };
+      return updated;
+    });
+    setEditingSlot(null);
+    setMoveSearch("");
+  };
+
+  const resetBossMoveset = () => { setBossMoveset(autoBossMoveset); setEditingSlot(null); };
 
   const autoBossStyle = useMemo(() => bossMoveset ? detectBossStyle(bossMoveset) : null, [bossMoveset]);
 
@@ -686,9 +770,12 @@ function App() {
 
   const selectBoss = (name) => {
     setSelectedBoss(name); setSearch(name); setShowDD(false); setTeraType(""); setUseManual(false);
-    const ms = data ? getBossMoveset(data.boss, name, starLevel) : null;
-    if (ms) setBossStyle(detectBossStyle(ms));
   };
+
+  // Auto-update boss attack style when moveset changes (including manual swaps)
+  useEffect(() => {
+    if (bossMoveset) setBossStyle(detectBossStyle(bossMoveset));
+  }, [bossMoveset]);
 
   const results = useMemo(() => {
     if (!data || !bossTypes || bossTypes.length === 0) return [];
@@ -898,17 +985,66 @@ function App() {
               </div>
             )}
 
-            {/* Boss Moveset */}
+            {/* Boss Moveset - Editable */}
             {bossMoveset && (
               <div>
-                <div style={{ fontSize:"9px", letterSpacing:"1.5px", color:"#C22E28", fontWeight:700, marginBottom:"8px" }}>BOSS MOVESET — LV{starLevel >= 7 ? 100 : starLevel >= 6 ? 90 : 75}</div>
-                <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"8px" }}>
+                  <span style={{ fontSize:"9px", letterSpacing:"1.5px", color:"#C22E28", fontWeight:700 }}>BOSS MOVESET — LV{starLevel >= 7 ? 100 : starLevel >= 6 ? 90 : 75}</span>
+                  <span style={{ fontSize:"9px", color:"#4a4660" }}>click a move to swap</span>
+                  {JSON.stringify(bossMoveset) !== JSON.stringify(autoBossMoveset) && (
+                    <span onClick={resetBossMoveset} style={{ fontSize:"9px", color:"#a78bfa", cursor:"pointer", textDecoration:"underline" }}>reset to auto</span>
+                  )}
+                </div>
+                <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", position:"relative" }}>
                   {bossMoveset.map((m, i) => (
-                    <div key={i} style={{ display:"flex", alignItems:"center", gap:"5px", padding:"5px 10px", borderRadius:"8px", background:`linear-gradient(135deg, ${TC[m.type]}11, ${TC[m.type]}08)`, border:`1px solid ${TC[m.type]}22` }}>
-                      <TypeBadge type={m.type} small />
-                      <span style={{ fontSize:"12px", fontWeight:600 }}>{m.name}</span>
-                      {m.bp > 0 && <span style={{ fontSize:"10px", color: m.cat==="P" ? "#ef4444" : "#60a5fa", fontWeight:700 }}>{m.bp}{m.cat==="P"?"⚔":"✦"}</span>}
-                      {m.bp === 0 && <span style={{ fontSize:"10px", color:"#444" }}>status</span>}
+                    <div key={i} style={{ position:"relative" }}>
+                      <div onClick={() => { setEditingSlot(editingSlot === i ? null : i); setMoveSearch(""); }}
+                        style={{ display:"flex", alignItems:"center", gap:"5px", padding:"5px 10px", borderRadius:"8px",
+                          background: editingSlot === i ? `${TC[m.type]}25` : `linear-gradient(135deg, ${TC[m.type]}11, ${TC[m.type]}08)`,
+                          border: editingSlot === i ? `2px solid ${TC[m.type]}66` : `1px solid ${TC[m.type]}22`,
+                          cursor:"pointer", transition:"all 0.15s",
+                        }}>
+                        <TypeBadge type={m.type} small />
+                        <span style={{ fontSize:"12px", fontWeight:600 }}>{m.name}</span>
+                        {m.bp > 0 && <span style={{ fontSize:"10px", color: m.cat==="P" ? "#ef4444" : "#60a5fa", fontWeight:700 }}>{m.bp}{m.cat==="P"?"⚔":"✦"}</span>}
+                        <span style={{ fontSize:"10px", color:"#4a4660" }}>✎</span>
+                      </div>
+                      {/* Swap dropdown */}
+                      {editingSlot === i && (
+                        <div style={{ position:"absolute", top:"100%", left:0, zIndex:20, marginTop:"4px", width:"280px",
+                          background:"#1a1830", border:"1px solid rgba(167,139,250,0.3)", borderRadius:"10px",
+                          boxShadow:"0 12px 32px rgba(0,0,0,0.6)", maxHeight:"300px", overflow:"hidden", display:"flex", flexDirection:"column" }}>
+                          <input value={moveSearch} onChange={e => setMoveSearch(e.target.value)} autoFocus
+                            placeholder="Search moves..."
+                            style={{ padding:"8px 12px", border:"none", borderBottom:"1px solid rgba(255,255,255,0.06)", background:"transparent",
+                              color:"#e2dff0", fontSize:"12px", fontFamily:"inherit", outline:"none" }} />
+                          <div style={{ overflow:"auto", maxHeight:"250px" }}>
+                            {bossAllMoves
+                              .filter(mv => !moveSearch || mv.name.toLowerCase().includes(moveSearch.toLowerCase()))
+                              .slice(0, 30)
+                              .map(mv => {
+                                const isActive = bossMoveset.some(bm => bm.name === mv.name);
+                                const debuff = data.moves[mv.id]?.debuff;
+                                return (
+                                  <div key={mv.id} onClick={() => !isActive && swapBossMove(i, mv)}
+                                    style={{ padding:"6px 12px", cursor: isActive ? "default" : "pointer", display:"flex", alignItems:"center", gap:"6px",
+                                      borderBottom:"1px solid rgba(255,255,255,0.03)", opacity: isActive ? 0.4 : 1,
+                                      background: isActive ? "rgba(255,255,255,0.02)" : "transparent" }}
+                                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background="rgba(167,139,250,0.08)"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = isActive ? "rgba(255,255,255,0.02)" : "transparent"; }}>
+                                    <TypeBadge type={mv.type} small />
+                                    <span style={{ fontSize:"11px", fontWeight:600, flex:1 }}>{mv.name}</span>
+                                    <span style={{ fontSize:"10px", color: mv.cat==="P" ? "#ef4444" : "#60a5fa", fontWeight:700 }}>{mv.bp}{mv.cat==="P"?"⚔":"✦"}</span>
+                                    <span style={{ fontSize:"9px", color:"#4a4660" }}>PP:{mv.pp}</span>
+                                    {debuff && <span style={{ fontSize:"8px", color:"#f97316", fontWeight:700 }}>
+                                      {Object.entries(debuff).map(([s,v]) => s+v).join(" ")}
+                                    </span>}
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -990,10 +1126,32 @@ function App() {
                       );
                     })}
                   </div>
-                  <div style={{ display:"flex", gap:"8px" }}>
-                    <button onClick={clearMyPokemon} style={{ fontSize:"10px", padding:"4px 10px", borderRadius:"6px", border:"1px solid rgba(239,68,68,0.2)", background:"rgba(239,68,68,0.06)", color:"#ef4444", cursor:"pointer", fontFamily:"inherit", fontWeight:600 }}>Clear All</button>
-                    <span style={{ fontSize:"10px", color:"#3a3850", alignSelf:"center" }}>Saved in your browser</span>
+                  <div style={{ display:"flex", gap:"8px", flexWrap:"wrap", alignItems:"center" }}>
+                    <button onClick={exportCode} style={{ fontSize:"10px", padding:"5px 12px", borderRadius:"6px", border:"1px solid rgba(167,139,250,0.25)", background:"rgba(167,139,250,0.08)", color:"#a78bfa", cursor:"pointer", fontFamily:"inherit", fontWeight:700 }}>📋 Export Code</button>
+                    <button onClick={() => setShowShareCode(showShareCode === "import" ? false : "import")} style={{ fontSize:"10px", padding:"5px 12px", borderRadius:"6px", border:"1px solid rgba(52,211,153,0.25)", background:"rgba(52,211,153,0.08)", color:"#34d399", cursor:"pointer", fontFamily:"inherit", fontWeight:700 }}>📥 Import Code</button>
+                    <button onClick={clearMyPokemon} style={{ fontSize:"10px", padding:"5px 12px", borderRadius:"6px", border:"1px solid rgba(239,68,68,0.2)", background:"rgba(239,68,68,0.06)", color:"#ef4444", cursor:"pointer", fontFamily:"inherit", fontWeight:600 }}>Clear All</button>
+                    {shareMsg && <span style={{ fontSize:"10px", color:"#34d399", fontWeight:600 }}>{shareMsg}</span>}
                   </div>
+                  {/* Export code display */}
+                  {showShareCode && showShareCode !== "import" && (
+                    <div style={{ marginTop:"8px", padding:"8px 12px", borderRadius:"6px", background:"rgba(167,139,250,0.06)", border:"1px solid rgba(167,139,250,0.15)" }}>
+                      <div style={{ fontSize:"9px", color:"#a78bfa", fontWeight:700, marginBottom:"4px" }}>YOUR SHARE CODE — copy this and paste on other device</div>
+                      <textarea readOnly value={showShareCode} onClick={e => e.target.select()} style={{ width:"100%", padding:"6px 8px", borderRadius:"4px", background:"rgba(0,0,0,0.3)", border:"1px solid rgba(167,139,250,0.2)", color:"#e2dff0", fontSize:"10px", fontFamily:"'JetBrains Mono',monospace", resize:"none", height:"50px", outline:"none" }} />
+                    </div>
+                  )}
+                  {/* Import code input */}
+                  {showShareCode === "import" && (
+                    <div style={{ marginTop:"8px", padding:"8px 12px", borderRadius:"6px", background:"rgba(52,211,153,0.06)", border:"1px solid rgba(52,211,153,0.15)" }}>
+                      <div style={{ fontSize:"9px", color:"#34d399", fontWeight:700, marginBottom:"4px" }}>PASTE SHARE CODE — this will replace your current list</div>
+                      <div style={{ display:"flex", gap:"6px" }}>
+                        <textarea value={importCode} onChange={e => setImportCode(e.target.value)} placeholder="Paste code here..."
+                          style={{ flex:1, padding:"6px 8px", borderRadius:"4px", background:"rgba(0,0,0,0.3)", border:"1px solid rgba(52,211,153,0.2)", color:"#e2dff0", fontSize:"10px", fontFamily:"'JetBrains Mono',monospace", resize:"none", height:"50px", outline:"none" }} />
+                        <button onClick={importFromCode} disabled={!importCode.trim()}
+                          style={{ padding:"8px 16px", borderRadius:"6px", background: importCode.trim() ? "rgba(52,211,153,0.15)" : "rgba(255,255,255,0.02)", border:"1px solid rgba(52,211,153,0.3)", color: importCode.trim() ? "#34d399" : "#4a4660", cursor: importCode.trim() ? "pointer" : "default", fontFamily:"inherit", fontWeight:700, fontSize:"11px", alignSelf:"center" }}>Import</button>
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ fontSize:"9px", color:"#2a2840", marginTop:"6px" }}>Saved in browser · Use export/import to sync between devices</div>
                 </div>
               )}
             </div>
@@ -1136,7 +1294,8 @@ function App() {
 
                   {/* Best move & stats */}
                   <div style={{ display:"flex", gap:"16px", marginTop:"8px", fontSize:"11px", flexWrap:"wrap", color:"#555" }}>
-                    <span>Best: <span style={{ color: c.score.bestMovePower >= 300 ? "#fbbf24" : c.score.bestMovePower >= 200 ? "#f97316" : "#999", fontWeight:700 }}>{c.score.bestMoveName} ({c.score.bestMovePower})</span></span>
+                    <span>Best: <span style={{ color: c.score.bestMovePower >= 300 ? "#fbbf24" : c.score.bestMovePower >= 200 ? "#f97316" : "#999", fontWeight:700 }}>{c.score.bestMoveName} ({c.score.bestMovePower} pwr × {c.score.bestMovePP}pp)</span></span>
+                    {c.score.killPotential < 100 && <span style={{ color:"#ef4444", fontWeight:700 }}>⚠ Kill: {c.score.killPotential}%</span>}
                     <span>Stats: <span style={{color:"#777"}}>{c.hp}/{c.atk}/{c.def}/{c.spa}/{c.spd}/{c.spe}</span></span>
                   </div>
                 </div>
