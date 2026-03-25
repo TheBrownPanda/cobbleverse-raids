@@ -378,24 +378,37 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
     if (c.hasLeechSeed) healPerTurn += counterHP * 0.125; // 12.5%/turn, passive
     if (c.itemHeal > 0) healPerTurn += counterHP * (c.itemHeal / 100); // Leftovers 6.25%, Black Sludge 6.25%
     if (c.abilityInfo.passiveHeal >= 12) healPerTurn += counterHP * 0.125; // Poison Heal 12.5%/turn
-    else if (c.abilityInfo.passiveHeal >= 6) healPerTurn += counterHP * 0.0625; // Rain Dish/Ice Body/Grassy Surge
+    else if (c.abilityInfo.passiveHeal >= 6) healPerTurn += counterHP * 0.0625; // Rain Dish/Ice Body
 
-    // Active healing (costs a turn, so effective rate is halved since you alternate attack/heal)
-    if (c.hasReliableRecovery) healPerTurn += counterHP * 0.20; // Recover/Roost 50% but costs 1 of every ~2.5 turns
-    else if (c.hasRest) healPerTurn += counterHP * 0.12; // Full heal but 2 turns asleep, ~12%/turn effective
+    // Active healing (costs a turn)
+    if (c.hasReliableRecovery) healPerTurn += counterHP * 0.20; // Recover/Roost 50% but costs ~1/2.5 turns
+    // Rest: full heal but 2 turns ASLEEP = you take 2 free hits with no healing/attacking
+    // In raids this is terrible — boss hits you twice while sleeping, basically suicide vs SE
+    else if (c.hasRest) healPerTurn += counterHP * 0.05; // heavily nerfed: 2 turns sleeping = huge risk
 
     // Drain moves — only count if they do real damage in this matchup
     for (const dm of c.hasDrain) {
       const eff = getEff(dm.type, effTypes);
       const isSTAB = c.stab.includes(dm.type);
-      if (isSTAB && eff >= 2) { healPerTurn += counterHP * 0.08; break; } // STAB SE drain heals a lot
-      else if (eff >= 2 || isSTAB) { healPerTurn += counterHP * 0.04; break; } // decent drain
+      if (isSTAB && eff >= 2) { healPerTurn += counterHP * 0.08; break; }
+      else if (eff >= 2 || isSTAB) { healPerTurn += counterHP * 0.04; break; }
     }
   }
   
+  // Check if boss hits us SE — this is THE critical survival factor
+  // Boss with SE STAB attacks = you take 3x-4x damage and die fast
+  let bossHitsSE = false;
+  for (const bm of bossMoveList) {
+    if (bm.bp <= 0) continue;
+    let bmEff = getEff(bm.type, c.types);
+    if (c.abilityInfo.typeImmune === bm.type) bmEff = 0;
+    if (bmEff >= 2) { bossHitsSE = true; break; }
+  }
+  
   // Setup defensive boost: CM/BU reduce damage taken over time
-  // After 3 turns of CM vs special boss: +3 SpDef ≈ take 60% damage
-  // After 3 turns of BU vs physical boss: +3 Def ≈ take 60% damage
+  // CRITICAL: setup only helps if it boosts the right defense
+  // CM boosts SpDef → useless vs physical boss
+  // BU boosts Def → useless vs special boss  
   let defSetupReduction = 1.0;
   if (c.setupType === "cm" && bossStyle !== "physical") defSetupReduction = 0.65;
   else if (c.setupType === "bu" && bossStyle !== "special") defSetupReduction = 0.65;
@@ -407,15 +420,18 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
   
   // Turns needed to set up + kill
   const turnsToSetup = ["sd","np","dd","ss"].includes(c.setupType) ? 3 : ["cm","bu"].includes(c.setupType) ? 4 : c.setupType === "qd" ? 3 : 0;
-  const turnsNeeded = turnsToSetup + (hasSE ? 6 : 12); // SE kills faster
+  const turnsNeeded = turnsToSetup + (hasSE ? 6 : 12);
   
-  // Survival multiplier: if you die before you can contribute, score is crushed
+  // Survival multiplier
   let survivalMult = 1.0;
-  if (turnsToSurvive <= 1) survivalMult = 0.1; // dies immediately
+  if (turnsToSurvive <= 1) survivalMult = 0.1;
   else if (turnsToSurvive <= 2) survivalMult = 0.2;
-  else if (turnsToSurvive <= turnsToSetup) survivalMult = 0.25; // dies during setup
+  else if (turnsToSurvive <= turnsToSetup) survivalMult = 0.25;
   else if (turnsToSurvive < turnsNeeded) survivalMult = Math.max(0.3, turnsToSurvive / turnsNeeded);
-  // Else: survives long enough → 1.0
+  
+  // Boss SE penalty — even if you survive X turns, taking SE hits is fundamentally bad
+  // You need much more sustain/bulk to compensate, and most mons just die
+  if (bossHitsSE && survivalMult > 0.4) survivalMult *= 0.6;
   let walledBy = null;
   let safeMovePower = bestMovePower;
   let safeMoveName = bestMoveName;
@@ -527,7 +543,7 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
   const bossIsGrass = bossTypes.includes("Grass") || teraType === "Grass";
   if (c.hasLeechSeed && !bossIsGrass) sustainScore += 5;
   if (c.hasReliableRecovery) sustainScore += 4;
-  else if (c.hasRest) sustainScore += 2;
+  else if (c.hasRest) sustainScore += 1; // Rest is risky in raids: 2 turns asleep = 2 free boss hits
   // Drain moves scored by matchup
   let bestDrainScore = 0;
   for (const m of c.hasDrain) {
@@ -599,7 +615,7 @@ function scoreCounter(c, bossTypes, teraType, bossStyle, raidMode, bossMoves, bo
     immunity: immunityBonus, bestMovePower: Math.round(bestMovePower),
     bestMoveName, defMult: worstEff, hasStabSE: bestStabSE, rawDmgBonus, fullImmune, walledBy, debuffPenalty,
     killPotential: Math.round(killPotential * 100), totalThroughput: Math.round(totalThroughput), bestMovePP, setupDmgMult, hasSE, setupMismatch: c.setupType !== "none" && !setupMatchesAttacker && c.setupType !== "qd" && c.setupType !== "ss",
-    turnsToSurvive, survivalPct: Math.round(survivalMult * 100),
+    turnsToSurvive, survivalPct: Math.round(survivalMult * 100), bossHitsSE,
   };
 }
 
@@ -1008,7 +1024,7 @@ function App() {
       <div style={{ background:"linear-gradient(180deg, #161520 0%, #0f0e13 100%)", borderBottom:"1px solid rgba(86,171,47,0.15)", padding:"24px 16px 20px", textAlign:"center" }}>
         <h1 style={{ fontSize:"36px", fontWeight:900, letterSpacing:"6px", margin:0, fontFamily:"'Rajdhani',sans-serif", background:"linear-gradient(135deg, #56ab2f, #a8e063)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>COBBLEVERSE</h1>
         <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#4a4858", marginTop:"2px", fontWeight:600 }}>RAID COUNTER ANALYZER</div>
-        <div style={{ fontSize:"10px", color:"#2e2d38", marginTop:"4px" }}>{pokemonNames.length} Pokémon · {Object.keys(data.moves).length} Moves · <span style={{color:"#3a3850"}}>v0.4.3</span></div>
+        <div style={{ fontSize:"10px", color:"#2e2d38", marginTop:"4px" }}>{pokemonNames.length} Pokémon · {Object.keys(data.moves).length} Moves · <span style={{color:"#3a3850"}}>v0.4.4</span></div>
       </div>
 
       <div style={{ maxWidth:"920px", margin:"0 auto", padding:"20px 16px" }}>
@@ -1464,6 +1480,7 @@ function App() {
                     {!c.score.hasSE && <span style={{ color:"#ef4444", fontWeight:700 }}>⚠ No SE</span>}
                     {c.score.killPotential < 100 && <span style={{ color: c.score.killPotential < 50 ? "#ef4444" : "#f97316", fontWeight:700 }}>Kill: {c.score.killPotential}%</span>}
                     {c.score.survivalPct < 100 && <span style={{ color: c.score.turnsToSurvive <= 2 ? "#ef4444" : "#f97316", fontWeight:700 }}>~{c.score.turnsToSurvive} turns alive</span>}
+                    {c.score.bossHitsSE && <span style={{ color:"#ef4444", fontWeight:700 }}>⚠ Boss SE</span>}
                     <span>Stats: <span style={{color:"#777"}}>{c.hp}/{c.atk}/{c.def}/{c.spa}/{c.spd}/{c.spe}</span></span>
                   </div>
                 </div>
